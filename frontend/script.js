@@ -31,7 +31,6 @@ function hideMessages() {
 // Cookies Banner Management
 const cookiesBanner = document.getElementById('cookiesBanner');
 const acceptCookiesBtn = document.getElementById('acceptCookies');
-const declineCookiesBtn = document.getElementById('declineCookies');
 
 // Check if user has already accepted/declined cookies
 function checkCookiesConsent() {
@@ -69,13 +68,15 @@ acceptCookiesBtn.addEventListener('click', () => {
     }
 });
 
-// Handle decline cookies
-declineCookiesBtn.addEventListener('click', () => {
-    localStorage.setItem('cookiesConsent', 'declined');
-    cookiesBanner.style.display = 'none';
-    // Still set a cookie to remember the choice
-    document.cookie = 'cookiesConsent=declined; path=/; max-age=31536000'; // 1 year
-});
+// Terms link handler (optional - can link to terms page)
+const termsLink = document.querySelector('.cookies-terms-link');
+if (termsLink) {
+    termsLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        // You can add a terms page or modal here
+        alert('Terms of use page - to be implemented');
+    });
+}
 
 // Close modal handlers
 closeCookiesModal.addEventListener('click', () => {
