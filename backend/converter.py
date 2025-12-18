@@ -7,6 +7,7 @@ import re
 import librosa
 import numpy as np
 import uuid
+import base64
 
 
 class YouTubeAudioConverter:
@@ -21,13 +22,40 @@ class YouTubeAudioConverter:
         """
         self.temp_dir = temp_dir or tempfile.gettempdir()
         self.ensure_temp_dir()
-        # Path del file cookies (relativo alla directory backend)
-        backend_dir = os.path.dirname(os.path.abspath(__file__))
-        self.cookies_path = os.path.join(backend_dir, 'cookies.txt')
+        # Path del file cookies (può essere configurato via env var per produzione)
+        # Se COOKIES_FILE è impostato, usa quello, altrimenti usa il path di default
+        cookies_file_env = os.environ.get('COOKIES_FILE')
+        if cookies_file_env:
+            self.cookies_path = cookies_file_env
+        else:
+            # Path di default (relativo alla directory backend)
+            backend_dir = os.path.dirname(os.path.abspath(__file__))
+            self.cookies_path = os.path.join(backend_dir, 'cookies.txt')
+        
+        # Crea il file cookies da variabile d'ambiente se presente (per Render/produzione)
+        self._create_cookies_from_env()
     
     def ensure_temp_dir(self):
         """Assicura che la directory temporanea esista"""
         os.makedirs(self.temp_dir, exist_ok=True)
+    
+    def _create_cookies_from_env(self):
+        """
+        Crea il file cookies.txt da variabile d'ambiente COOKIES_BASE64 se presente.
+        Utile per deployment su Render/Railway dove non si può committare il file.
+        """
+        cookies_base64 = os.environ.get('COOKIES_BASE64')
+        if cookies_base64:
+            try:
+                # Decodifica il contenuto base64
+                cookies_content = base64.b64decode(cookies_base64).decode('utf-8')
+                # Crea il file cookies.txt
+                with open(self.cookies_path, 'w', encoding='utf-8') as f:
+                    f.write(cookies_content)
+                print(f"✓ Cookies file created from COOKIES_BASE64 environment variable")
+            except Exception as e:
+                print(f"⚠ Warning: Failed to create cookies file from COOKIES_BASE64: {e}")
+                # Non blocca l'avvio se fallisce
     
     def check_ffmpeg(self):
         """Verifica che ffmpeg sia installato e disponibile"""

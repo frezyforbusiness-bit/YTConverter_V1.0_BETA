@@ -75,6 +75,29 @@ Non sono necessari per il funzionamento base, ma puoi aggiungere:
 - `PORT`: `5000` (Render lo imposta automaticamente, ma puoi specificarlo)
 - `FLASK_ENV`: `production` (per disabilitare debug mode)
 
+#### ⚠️ IMPORTANTE: Configurazione Cookies per YouTube
+
+Per evitare errori "Sign in to confirm you're not a bot" da YouTube:
+
+1. **Converti il file cookies.txt in base64:**
+   ```bash
+   cd backend
+   python encode_cookies.py
+   ```
+
+2. **Copia l'output base64** (la stringa lunga tra le linee ===)
+
+3. **In Render Dashboard:**
+   - Vai su **Environment** (nel menu laterale del tuo servizio)
+   - Click **"Add Environment Variable"**
+   - **Key**: `COOKIES_BASE64`
+   - **Value**: (incolla la stringa base64 copiata prima)
+   - Click **"Save Changes"**
+
+4. **Riavvia il servizio** (Render lo farà automaticamente dopo aver salvato)
+
+Il file cookies.txt verrà creato automaticamente all'avvio del server!
+
 ### Step 7: Deploy
 
 Click **"Create Web Service"**

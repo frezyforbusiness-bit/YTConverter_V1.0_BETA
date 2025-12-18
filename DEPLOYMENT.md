@@ -143,6 +143,33 @@ If needed, you can set these environment variables:
 
 - `PORT`: Server port (default: 5000)
 - `TEMP_DIR`: Temporary files directory (default: system temp)
+- `COOKIES_FILE`: Path to YouTube cookies file (optional, default: `backend/cookies.txt`)
+
+### YouTube Cookies Configuration
+
+To avoid YouTube bot detection, you can provide a cookies file:
+
+1. **Local Development**: Place `cookies.txt` in the `backend/` directory
+
+2. **Production on Render (Recommended)**:
+   - Convert your `cookies.txt` to base64:
+     ```bash
+     cd backend
+     python encode_cookies.py
+     ```
+   - Copy the base64 output
+   - In Render Dashboard → Your Service → Environment:
+     - Add Environment Variable:
+       - **Key**: `COOKIES_BASE64`
+       - **Value**: (paste the base64 string)
+   - The file will be automatically created on startup
+
+3. **Production on Railway/Other platforms**:
+   - Option A: Use `COOKIES_BASE64` environment variable (same as Render)
+   - Option B: Upload `cookies.txt` to your server via SSH
+   - Option C: Set `COOKIES_FILE=/path/to/cookies.txt` environment variable
+
+**Note**: The `cookies.txt` file is gitignored for security. The `COOKIES_BASE64` method is the easiest for cloud platforms like Render.
 
 ## CORS Configuration
 
