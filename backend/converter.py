@@ -95,8 +95,12 @@ class YouTubeAudioConverter:
                 'youtube': {
                     'player_client': ['ios', 'android', 'web'],
                     'player_skip': ['webpage', 'configs'],
+                    'skip': ['dash', 'hls'],  # Skip problematic formats
                 }
             },
+            # Opzioni per migliorare l'estrazione
+            'no_check_certificate': False,
+            'prefer_insecure': False,
             # Opzioni anti-bot
             'geo_bypass': True,
             'age_limit': None,
@@ -109,11 +113,14 @@ class YouTubeAudioConverter:
         video_path = None
         
         # Prova con diversi client se il primo fallisce
+        # Ordine: iOS (meno bloccato), poi Android, poi web variants
         clients_to_try = [
             {'player_client': ['ios']},
             {'player_client': ['android']},
+            {'player_client': ['android_embedded']},
             {'player_client': ['web']},
             {'player_client': ['mweb']},
+            {'player_client': ['tv_embedded']},
         ]
         
         last_error = None
@@ -187,11 +194,16 @@ class YouTubeAudioConverter:
                 if 'bot' in error_msg.lower() or 'sign in' in error_msg.lower():
                     print(f"Bot detection error, trying next client...")
                     continue
-                # Se è un altro tipo di errore che non è bot-related, rilanciamo
+                # Se è un errore di player response, prova il prossimo client
+                elif 'player response' in error_msg.lower() or 'failed to extract' in error_msg.lower():
+                    print(f"Player response error, trying next client...")
+                    continue
+                # Se è un errore di playlist, rilanciamo subito
                 elif 'playlist' in error_msg.lower():
                     raise ValueError("Playlists are not supported. Use a single video URL.")
                 else:
                     # Per altri errori, proviamo comunque il prossimo client
+                    print(f"Other error, trying next client...")
                     continue
         
         # Se arriviamo qui, tutti i client hanno fallito
