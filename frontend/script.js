@@ -379,7 +379,17 @@ form.addEventListener('submit', async (e) => {
                 } else if (status.status === 'error') {
                     clearInterval(pollInterval);
                     const errorMsg = status.error || 'Something went wrong during conversion';
-                    showError(errorMsg.includes('playlist') ? 'No playlists, single videos only! 🙄' : `😬 ${errorMsg}`);
+                    
+                    // Check if cookies are required
+                    if (errorMsg.includes('COOKIES_REQUIRED') || 
+                        (errorMsg.includes('cookies') && errorMsg.includes('required'))) {
+                        // Show manual cookies modal
+                        pendingConversion = { url: youtubeUrl, format: audioFormat };
+                        cookiesManualModal.style.display = 'flex';
+                        showError('This video requires YouTube cookies. Please provide them to continue. 🍪');
+                    } else {
+                        showError(errorMsg.includes('playlist') ? 'No playlists, single videos only! 🙄' : `😬 ${errorMsg}`);
+                    }
                     setLoading(false);
                     hideProgress();
                 }
