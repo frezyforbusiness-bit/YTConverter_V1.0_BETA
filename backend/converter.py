@@ -140,9 +140,8 @@ class YouTubeAudioConverter:
         last_error = None
         last_client = None
         
-        try:
-            # Try each player client in order
-            for client_list in player_clients:
+        # Try each player client in order
+        for client_list in player_clients:
                 try:
                     # Build options for this client
                     current_opts = base_opts.copy()
@@ -218,13 +217,13 @@ class YouTubeAudioConverter:
                     
                     # Continue to next client for other errors
                     continue
-            
-            # All clients failed - provide clear error message
-            if last_error:
-                error_msg = str(last_error)
-                self._raise_download_error(error_msg)
-            else:
-                raise Exception("Failed to download video: Unknown error")
+        
+        # All clients failed - provide clear error message
+        if last_error:
+            error_msg = str(last_error)
+            self._raise_download_error(error_msg)
+        else:
+            raise Exception("Failed to download video: Unknown error")
     
     def _raise_download_error(self, error_msg):
         """
