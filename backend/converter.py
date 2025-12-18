@@ -109,15 +109,17 @@ class YouTubeAudioConverter:
             # Modern user agent (helps avoid basic bot detection)
             'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             
-            # Realistic HTTP headers
+            # Realistic HTTP headers (mimics real browser)
             'http_headers': {
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
                 'Accept-Language': 'en-US,en;q=0.9',
                 'Accept-Encoding': 'gzip, deflate, br',
                 'Sec-Fetch-Dest': 'document',
                 'Sec-Fetch-Mode': 'navigate',
                 'Sec-Fetch-Site': 'none',
+                'Sec-Fetch-User': '?1',
                 'Upgrade-Insecure-Requests': '1',
+                'Cache-Control': 'max-age=0',
             },
             
             # Retry configuration (robust against temporary failures)
@@ -125,6 +127,7 @@ class YouTubeAudioConverter:
             'fragment_retries': 5,
             'file_access_retries': 5,
             'socket_timeout': 30,
+            'concurrent_fragments': 1,  # Reduce concurrent requests to avoid detection
             
             # Anti-bot options
             'geo_bypass': True,
@@ -134,6 +137,10 @@ class YouTubeAudioConverter:
             'no_check_certificate': False,
             'prefer_insecure': False,
             'prefer_free_formats': False,
+            
+            # Additional options to help with extraction
+            'ignoreerrors': False,
+            'no_warnings': False,
         }
         
         # Add cookies file if provided
@@ -170,7 +177,7 @@ class YouTubeAudioConverter:
                     # Small delay between retries to avoid rate limiting
                     if last_error:
                         import time
-                        time.sleep(0.5)
+                        time.sleep(1.0)  # Increased delay to avoid rate limiting
                     
                     print(f"Trying player client: {client_list[0]}")
                     
@@ -264,23 +271,24 @@ class YouTubeAudioConverter:
             if has_cookies:
                 raise Exception("YouTube is blocking the request. The cookies may be expired or invalid. Try exporting fresh cookies from your browser.")
             else:
-                raise Exception("YouTube is blocking the request. This video may require authentication. Please provide YouTube cookies (export from your browser) or try again later.")
+                raise Exception("COOKIES_REQUIRED: YouTube is blocking the request. This video requires authentication. Please provide YouTube cookies (export from your browser using a browser extension).")
         
-        # Player response extraction failed
+        # Player response extraction failed (most common error)
         elif ('player response' in error_lower or 
               'failed to extract' in error_lower or 
-              'failed to parse json' in error_lower):
+              'failed to parse json' in error_lower or
+              'unable to extract player version' in error_lower):
             if has_cookies:
-                raise Exception("Failed to extract player response from YouTube. The cookies may be expired or invalid. Try exporting fresh cookies, or the video may be unavailable.")
+                raise Exception("Failed to extract player response from YouTube. The cookies may be expired or invalid. Try exporting fresh cookies from your browser, or the video may be unavailable.")
             else:
-                raise Exception("Failed to extract player response from YouTube. This often happens without cookies. Please provide YouTube cookies (export from your browser) or try a different video.")
+                raise Exception("COOKIES_REQUIRED: Failed to extract player response from YouTube. This video requires cookies for authentication. Please export cookies from your browser (where you're logged into YouTube) and provide them. Most YouTube videos require cookies to download.")
         
         # Generic error
         else:
             if has_cookies:
-                raise Exception(f"YouTube download failed: {error_msg}. Cookies were provided but may be invalid. Try exporting fresh cookies.")
+                raise Exception(f"YouTube download failed: {error_msg}. Cookies were provided but may be invalid. Try exporting fresh cookies from your browser.")
             else:
-                raise Exception(f"YouTube download failed: {error_msg}. Providing YouTube cookies may help (export from your browser).")
+                raise Exception(f"COOKIES_REQUIRED: YouTube download failed: {error_msg}. Providing YouTube cookies (export from your browser) is strongly recommended and often required for most videos.")
     
     def convert_to_audio(self, video_path, audio_format, output_path=None):
         """
