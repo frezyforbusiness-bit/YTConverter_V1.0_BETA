@@ -69,7 +69,7 @@ class YouTubeAudioConverter:
         if not self.validate_youtube_url(youtube_url):
             raise ValueError("URL YouTube non valido")
         
-        # Configurazione yt-dlp ottimizzata
+        # Configurazione yt-dlp ottimizzata per evitare blocchi
         ydl_opts = {
             'format': 'bestaudio/best',
             'outtmpl': os.path.join(self.temp_dir, '%(title)s.%(ext)s'),
@@ -77,12 +77,27 @@ class YouTubeAudioConverter:
             'no_warnings': False,
             'noplaylist': True,  # IMPORTANTE: non scarica playlist, solo video singolo
             'extract_flat': False,
+            # User agent moderno per evitare detection come bot
+            'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            # Headers per sembrare un browser reale
+            'http_headers': {
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language': 'en-us,en;q=0.5',
+                'Accept-Encoding': 'gzip, deflate',
+                'Accept-Charset': 'ISO-8859-1,utf-8;q=0.7,*;q=0.7',
+                'Keep-Alive': '300',
+                'Connection': 'keep-alive',
+            },
             # Usa client Android per evitare problemi con SABR streaming
             'extractor_args': {
                 'youtube': {
-                    'player_client': ['android', 'web'],
+                    'player_client': ['android', 'web', 'ios'],
                 }
             },
+            # Opzioni aggiuntive per evitare blocchi
+            'no_check_certificate': False,
+            'prefer_insecure': False,
+            'geo_bypass': True,
         }
         
         video_path = None
