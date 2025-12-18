@@ -110,8 +110,13 @@ class YouTubeAudioConverter:
                 'youtube': {
                     'player_client': ['ios', 'android', 'web'],
                     'player_skip': ['webpage', 'configs'],
+                    'skip': ['dash', 'hls'],  # Skip problematic streaming formats
                 }
             },
+            # Additional options to help with extraction
+            'no_check_certificate': False,
+            'prefer_insecure': False,
+            'prefer_free_formats': False,
             # Opzioni anti-bot
             'geo_bypass': True,
             'age_limit': None,
