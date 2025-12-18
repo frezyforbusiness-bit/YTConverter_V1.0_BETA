@@ -118,6 +118,8 @@ class YouTubeAudioConverter:
             'no_check_certificate': False,
             'prefer_insecure': False,
             'prefer_free_formats': False,
+            # Disabilita JS runtime requirement (può causare problemi se non installato)
+            'skip_download': False,
             # Opzioni anti-bot
             'geo_bypass': True,
             'age_limit': None,
@@ -150,17 +152,12 @@ class YouTubeAudioConverter:
         try:
             # Prova con diversi client se il primo fallisce
             # Ordine: iOS (meno bloccato), poi Android, poi web variants
-            # Aggiungiamo varianti con player_js_version=actual che può aiutare
+            # Rimuoviamo client non supportati e usiamo solo quelli funzionanti
             clients_to_try = [
-                {'player_client': ['ios'], 'player_js_version': 'actual'},
-                {'player_client': ['android'], 'player_js_version': 'actual'},
-                {'player_client': ['ios']},  # Senza player_js_version
-                {'player_client': ['android']},  # Senza player_js_version
-                {'player_client': ['android_embedded']},
-                {'player_client': ['web'], 'player_js_version': 'actual'},
-                {'player_client': ['web']},  # Senza player_js_version
+                {'player_client': ['ios']},
+                {'player_client': ['android']},
+                {'player_client': ['web']},
                 {'player_client': ['mweb']},
-                {'player_client': ['tv_embedded']},
             ]
             
             for client_config in clients_to_try:
@@ -169,8 +166,12 @@ class YouTubeAudioConverter:
                     current_opts = ydl_opts.copy()
                     
                     # Costruisci gli extractor_args combinando default e client_config
+                    # IMPORTANTE: player_js_version deve essere passato correttamente, non nel client_config
                     youtube_extractor_args = ydl_opts['extractor_args']['youtube'].copy()
-                    youtube_extractor_args.update(client_config)
+                    # Aggiorna solo player_client, mantieni player_js_version dal default
+                    youtube_extractor_args.update({
+                        'player_client': client_config.get('player_client', ['ios'])
+                    })
                     
                     current_opts['extractor_args'] = {
                         'youtube': youtube_extractor_args
@@ -179,6 +180,11 @@ class YouTubeAudioConverter:
                     # Aggiungi opzioni per migliorare l'estrazione
                     current_opts['ignoreerrors'] = False
                     current_opts['no_warnings'] = False
+                    
+                    # Aggiungi un piccolo delay tra i tentativi per evitare rate limiting
+                    if last_error:
+                        import time
+                        time.sleep(0.5)
                     
                     with yt_dlp.YoutubeDL(current_opts) as ydl:
                         # Prima estrae solo le info per verificare se è una playlist
@@ -239,12 +245,14 @@ class YouTubeAudioConverter:
                         print(f"Bot detection error, trying next client...")
                         continue
                     # Se è un errore di player response, prova il prossimo client
-                    elif 'player response' in error_msg.lower() or 'failed to extract' in error_msg.lower():
-                        print(f"Player response error, trying next client configuration...")
-                        # Se abbiamo cookies, potrebbe essere un problema di formato o restrizione YouTube
-                        if cookies_file or browser_name:
-                            print(f"Note: Cookies are configured but extraction still failing. This might indicate YouTube restrictions.")
-                        continue
+                elif 'player response' in error_msg.lower() or 'failed to extract' in error_msg.lower() or 'failed to parse json' in error_msg.lower():
+                    print(f"Player response/JSON parsing error, trying next client configuration...")
+                    # Se NON abbiamo cookies, questo è probabilmente il problema principale
+                    if not cookies_file and not browser_name:
+                        print(f"WARNING: No cookies configured! YouTube is likely blocking the request. Cookies are REQUIRED for most videos.")
+                    elif cookies_file or browser_name:
+                        print(f"Note: Cookies are configured but extraction still failing. This might indicate YouTube restrictions or invalid cookies.")
+                    continue
                     # Se è un errore di playlist, rilanciamo subito
                     elif 'playlist' in error_msg.lower():
                         raise ValueError("Playlists are not supported. Use a single video URL.")
