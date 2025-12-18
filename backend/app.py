@@ -29,7 +29,16 @@ conversion_status = {}
 @app.route('/')
 def index():
     """API root endpoint"""
-    return jsonify({"message": "Producer Tools - YouTube Audio Converter API"})
+    return jsonify({
+        "message": "Producer Tools - YouTube Audio Converter API",
+        "status": "running",
+        "endpoints": {
+            "health": "/health",
+            "convert": "/convert",
+            "status": "/status/<task_id>",
+            "download": "/download/<task_id>"
+        }
+    })
 
 
 def convert_task(task_id, youtube_url, audio_format):

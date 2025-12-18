@@ -1,7 +1,19 @@
 // API URL - automatically detects production or development
-const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-    ? 'http://localhost:5000'
-    : window.location.origin; // Use same origin in production
+// For Render: if frontend and backend are on different subdomains, 
+// you need to set this manually or use environment variable
+let API_URL;
+if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    API_URL = 'http://localhost:5000';
+} else {
+    // Try to use same origin first (if frontend and backend are on same domain)
+    // Otherwise, you need to set this manually
+    API_URL = window.location.origin;
+    
+    // If you know your backend URL, uncomment and set it:
+    // API_URL = 'https://your-backend-url.onrender.com';
+}
+
+console.log('API URL:', API_URL);
 
 const form = document.getElementById('converterForm');
 const convertBtn = document.getElementById('convertBtn');
