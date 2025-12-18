@@ -55,48 +55,61 @@ class YouTubeAudioConverter:
         
         return True
     
-    def download_video(self, youtube_url, get_info_only=False, browser_name=None, cookies_content=None):
+    def download_video(self, youtube_url, get_info_only=False, cookies_content=None):
         """
-        Scarica il video YouTube come file temporaneo o estrae solo le informazioni
-        Cookies vengono estratti automaticamente dal browser o forniti manualmente
+        Downloads YouTube video as temporary file or extracts info only.
+        
+        Production-ready implementation for Docker/VPS/Render:
+        - Headless operation (no browser dependencies)
+        - Optional cookies.txt file support (Netscape format)
+        - Default: works without cookies (may fail on restricted videos)
+        - Robust retry logic with multiple player clients
+        - Clear error messages for REST API
         
         Args:
-            youtube_url: URL del video YouTube
-            get_info_only: Se True, estrae solo le info senza scaricare
-            browser_name: Browser name to extract cookies from ('firefox', 'chrome', 'chromium', 'edge', 'opera', 'brave', 'vivaldi')
-            cookies_content: Optional cookies.txt content as string (Netscape format) - used as fallback
+            youtube_url: YouTube video URL
+            get_info_only: If True, only extracts metadata without downloading
+            cookies_content: Optional cookies.txt content as string (Netscape format)
+                            If provided, creates temporary cookies file for yt-dlp
         
         Returns:
-            tuple: (video_path, video_info) se get_info_only=False
-                   (None, video_info) se get_info_only=True
+            tuple: (video_path, video_info) if get_info_only=False
+                   (None, video_info) if get_info_only=True
+        
+        Raises:
+            ValueError: Invalid URL or playlist detected
+            FileNotFoundError: Video file not found after download
+            Exception: Download failed after trying all clients (with clear error message)
         """
+        # Validate URL first
         if not self.validate_youtube_url(youtube_url):
             raise ValueError("Invalid YouTube URL")
         
-        # Create temporary cookies file if cookies_content is provided (manual fallback)
+        # Create temporary cookies file if cookies_content is provided
         cookies_file = None
         if cookies_content:
             try:
                 cookies_file = os.path.join(self.temp_dir, f'cookies_{uuid.uuid4().hex}.txt')
                 with open(cookies_file, 'w', encoding='utf-8') as f:
                     f.write(cookies_content)
-                print(f"Created temporary cookies file from manual input: {cookies_file}")
+                print(f"Using cookies file: {cookies_file}")
             except Exception as e:
                 print(f"Warning: Could not create cookies file: {e}")
                 cookies_file = None
         
-        # Configurazione yt-dlp ottimizzata per evitare blocchi
-        # Prova diversi client in ordine di priorità
-        ydl_opts = {
+        # Base yt-dlp configuration (production-ready, headless)
+        base_opts = {
             'format': 'bestaudio/best',
             'outtmpl': os.path.join(self.temp_dir, '%(title)s.%(ext)s'),
             'quiet': True,
             'no_warnings': False,
             'noplaylist': True,
             'extract_flat': False,
-            # User agent moderno
+            
+            # Modern user agent (helps avoid basic bot detection)
             'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            # Headers realistici
+            
+            # Realistic HTTP headers
             'http_headers': {
                 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
                 'Accept-Language': 'en-US,en;q=0.9',
@@ -106,120 +119,92 @@ class YouTubeAudioConverter:
                 'Sec-Fetch-Site': 'none',
                 'Upgrade-Insecure-Requests': '1',
             },
-            # Prova prima con client iOS (meno bloccato), poi Android, poi web
-            'extractor_args': {
-                'youtube': {
-                    'player_client': ['ios', 'android', 'web'],
-                    'player_skip': ['webpage', 'configs'],
-                    # Non usiamo skip per dash/hls o player_js_version perché possono causare problemi
-                }
-            },
-            # Additional options to help with extraction
-            'no_check_certificate': False,
-            'prefer_insecure': False,
-            'prefer_free_formats': False,
-            # Disabilita JS runtime requirement (può causare problemi se non installato)
-            'skip_download': False,
-            # Opzioni anti-bot
-            'geo_bypass': True,
-            'age_limit': None,
-            # Retry logic - aumentiamo i retry per gestire meglio gli errori temporanei
+            
+            # Retry configuration (robust against temporary failures)
             'retries': 5,
             'fragment_retries': 5,
             'file_access_retries': 5,
-            # Aggiungi timeout più lunghi
             'socket_timeout': 30,
+            
+            # Anti-bot options
+            'geo_bypass': True,
+            'age_limit': None,
+            
+            # Security options
+            'no_check_certificate': False,
+            'prefer_insecure': False,
+            'prefer_free_formats': False,
         }
         
-        # Extract cookies automatically from browser (REQUIRED)
-        # IMPORTANTE: I cookies sono ESSENZIALI per evitare blocchi di YouTube
-        if browser_name:
-            try:
-                # Supported browsers: firefox, chrome, chromium, edge, opera, brave, vivaldi
-                valid_browsers = ['firefox', 'chrome', 'chromium', 'edge', 'opera', 'brave', 'vivaldi']
-                if browser_name.lower() in valid_browsers:
-                    ydl_opts['cookiesfrombrowser'] = (browser_name.lower(),)
-                    print(f"Attempting to extract cookies from {browser_name} browser")
-                else:
-                    print(f"Warning: Unsupported browser '{browser_name}'. Supported: {', '.join(valid_browsers)}")
-            except Exception as e:
-                print(f"Warning: Could not configure browser cookies extraction: {e}")
+        # Add cookies file if provided
+        if cookies_file and os.path.exists(cookies_file):
+            base_opts['cookiefile'] = cookies_file
+            print("Cookies file configured for authentication")
+        
+        # Player clients to try in priority order (iOS → Android → Web)
+        # iOS client is least blocked, web client is most compatible
+        player_clients = [
+            ['ios'],      # Priority 1: Mobile iOS client (least blocked)
+            ['android'],  # Priority 2: Mobile Android client
+            ['web'],      # Priority 3: Standard web client
+            ['mweb'],     # Priority 4: Mobile web client (fallback)
+        ]
         
         video_path = None
         last_error = None
+        last_client = None
         
         try:
-            # Prova con diversi client se il primo fallisce
-            # Ordine: iOS (meno bloccato), poi Android, poi web variants
-            # Rimuoviamo client non supportati e usiamo solo quelli funzionanti
-            clients_to_try = [
-                {'player_client': ['ios']},
-                {'player_client': ['android']},
-                {'player_client': ['web']},
-                {'player_client': ['mweb']},
-            ]
-            
-            for client_config in clients_to_try:
+            # Try each player client in order
+            for client_list in player_clients:
                 try:
-                    # Aggiorna la configurazione con il client corrente
-                    current_opts = ydl_opts.copy()
-                    
-                    # Costruisci gli extractor_args combinando default e client_config
-                    # IMPORTANTE: player_js_version deve essere passato correttamente, non nel client_config
-                    youtube_extractor_args = ydl_opts['extractor_args']['youtube'].copy()
-                    # Aggiorna solo player_client, mantieni player_js_version dal default
-                    youtube_extractor_args.update({
-                        'player_client': client_config.get('player_client', ['ios'])
-                    })
-                    
+                    # Build options for this client
+                    current_opts = base_opts.copy()
                     current_opts['extractor_args'] = {
-                        'youtube': youtube_extractor_args
+                        'youtube': {
+                            'player_client': client_list,
+                            'player_skip': ['webpage', 'configs'],  # Skip unnecessary data
+                        }
                     }
                     
-                    # Aggiungi opzioni per migliorare l'estrazione
-                    current_opts['ignoreerrors'] = False
-                    current_opts['no_warnings'] = False
-                    
-                    # Aggiungi un piccolo delay tra i tentativi per evitare rate limiting
+                    # Small delay between retries to avoid rate limiting
                     if last_error:
                         import time
                         time.sleep(0.5)
                     
+                    print(f"Trying player client: {client_list[0]}")
+                    
+                    # Extract info first (validates URL and checks for playlists)
                     with yt_dlp.YoutubeDL(current_opts) as ydl:
-                        # Prima estrae solo le info per verificare se è una playlist
                         info = ydl.extract_info(youtube_url, download=False)
                     
-                    # Verifica se è una playlist
+                    # Validate: reject playlists
                     if info.get('_type') == 'playlist':
                         raise ValueError("Playlists are not supported. Use a single video URL.")
                     
-                    # Verifica se ha entries (playlist)
+                    # Handle single-entry playlists (YouTube sometimes returns this)
                     if 'entries' in info and info['entries']:
                         entries = list(info['entries'])
                         if len(entries) > 1:
                             raise ValueError("Playlists are not supported. Use a single video URL.")
-                        # Se ha una sola entry, usa quella
                         if len(entries) == 1:
                             info = entries[0]
                     
-                    # Verifica che sia un video valido
+                    # Validate video ID
                     if not info.get('id'):
                         raise ValueError("Unable to extract video information. Check that the URL is correct.")
                     
-                    # Se serve solo le info, restituisci
+                    # If only info is needed, return now
                     if get_info_only:
                         return None, info
                     
-                    # Ora scarica il video (solo se non è una playlist)
-                    if info.get('_type') != 'playlist':
+                    # Download the video
+                    with yt_dlp.YoutubeDL(current_opts) as ydl:
                         info = ydl.extract_info(youtube_url, download=True)
                         video_path = ydl.prepare_filename(info)
-                    else:
-                        raise ValueError("Playlists are not supported. Use a single video URL.")
                     
-                    # Se il file scaricato ha un'estensione diversa, cerca il file effettivo
+                    # Handle different file extensions (yt-dlp may download with different extension)
                     if not os.path.exists(video_path):
-                        # Cerca il file con estensione corretta
                         base_name = os.path.splitext(video_path)[0]
                         for ext in ['.webm', '.m4a', '.mp4', '.opus', '.ogg']:
                             potential_path = base_name + ext
@@ -227,73 +212,75 @@ class YouTubeAudioConverter:
                                 video_path = potential_path
                                 break
                     
+                    # Final validation
                     if not os.path.exists(video_path):
                         raise FileNotFoundError("Video file not found after download")
                     
-                    # Successo! Restituisci il risultato
-                    print(f"Successfully downloaded using client: {client_config}")
+                    # Success!
+                    print(f"Successfully downloaded using client: {client_list[0]}")
                     return video_path, info
                     
                 except Exception as e:
                     error_msg = str(e)
                     last_error = e
-                    print(f"Failed with client {client_config}: {error_msg}")
+                    last_client = client_list[0]
+                    print(f"Client {client_list[0]} failed: {error_msg[:100]}...")
                     
-                    # Se è un errore di bot detection, prova il prossimo client
-                    if 'bot' in error_msg.lower() or 'sign in' in error_msg.lower():
-                        print(f"Bot detection error, trying next client...")
-                        continue
-                    # Se è un errore di player response o JSON parsing, prova il prossimo client
-                    elif ('player response' in error_msg.lower() or 
-                          'failed to extract' in error_msg.lower() or 
-                          'failed to parse json' in error_msg.lower()):
-                        print(f"Player response/JSON parsing error, trying next client configuration...")
-                        # Se NON abbiamo browser configurato, questo è probabilmente il problema principale
-                        if not browser_name:
-                            print(f"WARNING: No browser configured for cookie extraction! YouTube is likely blocking the request.")
-                        else:
-                            print(f"Note: Browser cookie extraction from {browser_name} is configured but still failing. The browser might not be installed on the server or cookies might not be accessible.")
-                        continue
-                    # Se è un errore di playlist, rilanciamo subito
-                    elif 'playlist' in error_msg.lower():
+                    # Don't retry on playlist errors (user error)
+                    if 'playlist' in error_msg.lower():
                         raise ValueError("Playlists are not supported. Use a single video URL.")
-                    else:
-                        # Per altri errori, proviamo comunque il prossimo client
-                        print(f"Other error, trying next client...")
-                        continue
-        
-            # Se arriviamo qui, tutti i client hanno fallito
+                    
+                    # Continue to next client for other errors
+                    continue
+            
+            # All clients failed - provide clear error message
             if last_error:
                 error_msg = str(last_error)
-                if 'bot' in error_msg.lower() or 'sign in' in error_msg.lower():
-                    raise Exception("YouTube is blocking the request. This video may require authentication or the service is temporarily unavailable. Please try again later or use a different video.")
-                elif ('player response' in error_msg.lower() or 
-                      'failed to extract' in error_msg.lower() or 
-                      'failed to parse json' in error_msg.lower()):
-                    # Suggerimenti specifici per questo errore
-                    suggestion = "Failed to extract player response from YouTube. "
-                    if not cookies_file and not browser_name:
-                        suggestion += "⚠️ COOKIES ARE REQUIRED! Please add your YouTube cookies (export from browser). Without cookies, YouTube blocks most requests. "
-                    elif cookies_file or browser_name:
-                        suggestion += "Cookies are configured but extraction failed. The cookies might be expired or invalid. Try exporting fresh cookies from your browser. "
-                    suggestion += "This might also be due to YouTube restrictions or the video being unavailable. Please try again later or use a different video."
-                    raise Exception(suggestion)
-                elif 'could not find' in error_msg.lower() and ('cookies' in error_msg.lower() or 'firefox' in error_msg.lower() or 'chrome' in error_msg.lower()):
-                    # Specific error: browser cookies database not found
-                    raise Exception("COOKIES_REQUIRED: Browser cookies not found on server. Please export cookies from your browser and paste them manually.")
-                else:
-                    raise Exception(f"Error during download after trying all clients: {error_msg}")
+                self._raise_download_error(error_msg, cookies_file is not None)
             else:
                 raise Exception("Failed to download video: Unknown error")
         
         finally:
-            # Clean up cookies file if it was created from manual input
+            # Clean up temporary cookies file
             if cookies_file and os.path.exists(cookies_file):
                 try:
                     os.remove(cookies_file)
-                    print(f"Cleaned up temporary cookies file: {cookies_file}")
+                    print(f"Cleaned up cookies file: {cookies_file}")
                 except Exception as e:
-                    print(f"Warning: Could not remove temporary cookies file {cookies_file}: {e}")
+                    print(f"Warning: Could not remove cookies file: {e}")
+    
+    def _raise_download_error(self, error_msg, has_cookies):
+        """
+        Raises appropriate exception with clear error message based on error type.
+        
+        Args:
+            error_msg: Original error message from yt-dlp
+            has_cookies: Whether cookies were provided
+        """
+        error_lower = error_msg.lower()
+        
+        # Bot detection / authentication required
+        if 'bot' in error_lower or 'sign in' in error_lower:
+            if has_cookies:
+                raise Exception("YouTube is blocking the request. The cookies may be expired or invalid. Try exporting fresh cookies from your browser.")
+            else:
+                raise Exception("YouTube is blocking the request. This video may require authentication. Please provide YouTube cookies (export from your browser) or try again later.")
+        
+        # Player response extraction failed
+        elif ('player response' in error_lower or 
+              'failed to extract' in error_lower or 
+              'failed to parse json' in error_lower):
+            if has_cookies:
+                raise Exception("Failed to extract player response from YouTube. The cookies may be expired or invalid. Try exporting fresh cookies, or the video may be unavailable.")
+            else:
+                raise Exception("Failed to extract player response from YouTube. This often happens without cookies. Please provide YouTube cookies (export from your browser) or try a different video.")
+        
+        # Generic error
+        else:
+            if has_cookies:
+                raise Exception(f"YouTube download failed: {error_msg}. Cookies were provided but may be invalid. Try exporting fresh cookies.")
+            else:
+                raise Exception(f"YouTube download failed: {error_msg}. Providing YouTube cookies may help (export from your browser).")
     
     def convert_to_audio(self, video_path, audio_format, output_path=None):
         """
