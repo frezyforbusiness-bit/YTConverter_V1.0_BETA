@@ -70,59 +70,85 @@ class YouTubeAudioConverter:
             raise ValueError("URL YouTube non valido")
         
         # Configurazione yt-dlp ottimizzata per evitare blocchi
+        # Prova diversi client in ordine di priorità
         ydl_opts = {
             'format': 'bestaudio/best',
             'outtmpl': os.path.join(self.temp_dir, '%(title)s.%(ext)s'),
-            'quiet': True,  # Riduce output verboso
+            'quiet': True,
             'no_warnings': False,
-            'noplaylist': True,  # IMPORTANTE: non scarica playlist, solo video singolo
+            'noplaylist': True,
             'extract_flat': False,
-            # User agent moderno per evitare detection come bot
+            # User agent moderno
             'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            # Headers per sembrare un browser reale
+            # Headers realistici
             'http_headers': {
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                'Accept-Language': 'en-us,en;q=0.5',
-                'Accept-Encoding': 'gzip, deflate',
-                'Accept-Charset': 'ISO-8859-1,utf-8;q=0.7,*;q=0.7',
-                'Keep-Alive': '300',
-                'Connection': 'keep-alive',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Accept-Encoding': 'gzip, deflate, br',
+                'Sec-Fetch-Dest': 'document',
+                'Sec-Fetch-Mode': 'navigate',
+                'Sec-Fetch-Site': 'none',
+                'Upgrade-Insecure-Requests': '1',
             },
-            # Usa client Android per evitare problemi con SABR streaming
+            # Prova prima con client iOS (meno bloccato), poi Android, poi web
             'extractor_args': {
                 'youtube': {
-                    'player_client': ['android', 'web', 'ios'],
+                    'player_client': ['ios', 'android', 'web'],
+                    'player_skip': ['webpage', 'configs'],
                 }
             },
-            # Opzioni aggiuntive per evitare blocchi
-            'no_check_certificate': False,
-            'prefer_insecure': False,
+            # Opzioni anti-bot
             'geo_bypass': True,
+            'age_limit': None,
+            # Retry logic
+            'retries': 3,
+            'fragment_retries': 3,
+            'file_access_retries': 3,
         }
         
         video_path = None
         
-        try:
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                # Prima estrae solo le info per verificare se è una playlist
-                info = ydl.extract_info(youtube_url, download=False)
+        # Prova con diversi client se il primo fallisce
+        clients_to_try = [
+            {'player_client': ['ios']},
+            {'player_client': ['android']},
+            {'player_client': ['web']},
+            {'player_client': ['mweb']},
+        ]
+        
+        last_error = None
+        
+        for client_config in clients_to_try:
+            try:
+                # Aggiorna la configurazione con il client corrente
+                current_opts = ydl_opts.copy()
+                current_opts['extractor_args'] = {
+                    'youtube': {
+                        **ydl_opts['extractor_args']['youtube'],
+                        **client_config
+                    }
+                }
+                
+                with yt_dlp.YoutubeDL(current_opts) as ydl:
+                    # Prima estrae solo le info per verificare se è una playlist
+                    info = ydl.extract_info(youtube_url, download=False)
                 
                 # Verifica se è una playlist
                 if info.get('_type') == 'playlist':
-                    raise ValueError("Le playlist non sono supportate. Inserisci l'URL di un singolo video.")
+                    raise ValueError("Playlists are not supported. Use a single video URL.")
                 
                 # Verifica se ha entries (playlist)
                 if 'entries' in info and info['entries']:
                     entries = list(info['entries'])
                     if len(entries) > 1:
-                        raise ValueError("Le playlist non sono supportate. Inserisci l'URL di un singolo video.")
+                        raise ValueError("Playlists are not supported. Use a single video URL.")
                     # Se ha una sola entry, usa quella
                     if len(entries) == 1:
                         info = entries[0]
                 
                 # Verifica che sia un video valido
                 if not info.get('id'):
-                    raise ValueError("Impossibile estrarre informazioni dal video. Verifica che l'URL sia corretto.")
+                    raise ValueError("Unable to extract video information. Check that the URL is correct.")
                 
                 # Se serve solo le info, restituisci
                 if get_info_only:
@@ -133,7 +159,7 @@ class YouTubeAudioConverter:
                     info = ydl.extract_info(youtube_url, download=True)
                     video_path = ydl.prepare_filename(info)
                 else:
-                    raise ValueError("Le playlist non sono supportate. Inserisci l'URL di un singolo video.")
+                    raise ValueError("Playlists are not supported. Use a single video URL.")
                 
                 # Se il file scaricato ha un'estensione diversa, cerca il file effettivo
                 if not os.path.exists(video_path):
@@ -146,17 +172,37 @@ class YouTubeAudioConverter:
                             break
                 
                 if not os.path.exists(video_path):
-                    raise FileNotFoundError("File video non trovato dopo il download")
+                    raise FileNotFoundError("Video file not found after download")
                 
+                # Successo! Restituisci il risultato
+                print(f"Successfully downloaded using client: {client_config}")
                 return video_path, info
+                
+            except Exception as e:
+                error_msg = str(e)
+                last_error = e
+                print(f"Failed with client {client_config}: {error_msg}")
+                
+                # Se è un errore di bot detection, prova il prossimo client
+                if 'bot' in error_msg.lower() or 'sign in' in error_msg.lower():
+                    print(f"Bot detection error, trying next client...")
+                    continue
+                # Se è un altro tipo di errore che non è bot-related, rilanciamo
+                elif 'playlist' in error_msg.lower():
+                    raise ValueError("Playlists are not supported. Use a single video URL.")
+                else:
+                    # Per altri errori, proviamo comunque il prossimo client
+                    continue
         
-        except Exception as e:
-            if video_path and os.path.exists(video_path):
-                try:
-                    os.remove(video_path)
-                except:
-                    pass
-            raise Exception(f"Errore durante il download: {str(e)}")
+        # Se arriviamo qui, tutti i client hanno fallito
+        if last_error:
+            error_msg = str(last_error)
+            if 'bot' in error_msg.lower() or 'sign in' in error_msg.lower():
+                raise Exception("YouTube is blocking the request. This video may require authentication or the service is temporarily unavailable. Please try again later or use a different video.")
+            else:
+                raise Exception(f"Error during download after trying all clients: {error_msg}")
+        else:
+            raise Exception("Failed to download video: Unknown error")
     
     def convert_to_audio(self, video_path, audio_format, output_path=None):
         """
