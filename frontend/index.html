@@ -52,6 +52,22 @@
                         class="cookies-textarea"
                     ></textarea>
                 </div>
+                <div class="form-group" style="margin-top: 20px;">
+                    <label>Or extract cookies automatically from browser:</label>
+                    <select id="browserSelect" class="browser-select">
+                        <option value="">-- Select Browser --</option>
+                        <option value="firefox">Firefox</option>
+                        <option value="chrome">Chrome</option>
+                        <option value="chromium">Chromium</option>
+                        <option value="edge">Microsoft Edge</option>
+                        <option value="opera">Opera</option>
+                        <option value="brave">Brave</option>
+                        <option value="vivaldi">Vivaldi</option>
+                    </select>
+                    <small class="info-hint" style="display: block; margin-top: 8px;">
+                        💡 If you're logged into YouTube in your browser, we can extract cookies automatically (server-side only)
+                    </small>
+                </div>
                 <div class="cookies-modal-buttons">
                     <button id="saveCookies" class="btn-save-cookies">Save Cookies</button>
                     <button id="skipCookies" class="btn-skip-cookies">Skip (Try without cookies)</button>

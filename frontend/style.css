@@ -87,7 +87,8 @@ main {
 .form-group input[type="number"],
 .form-group input[type="text"],
 .form-group select,
-.form-group textarea {
+.form-group textarea,
+.browser-select {
     width: 100%;
     padding: 15px 20px;
     border: 2px solid #4a4a4a;

@@ -93,9 +93,29 @@ cookiesModal.addEventListener('click', (e) => {
 // Save cookies
 saveCookiesBtn.addEventListener('click', () => {
     const cookiesContent = cookiesInput.value.trim();
+    const browserSelect = document.getElementById('browserSelect');
+    const selectedBrowser = browserSelect.value;
     
+    // Check if browser is selected instead of manual cookies
+    if (selectedBrowser && !cookiesContent) {
+        // Save browser preference
+        try {
+            localStorage.setItem('youtubeCookiesBrowser', selectedBrowser);
+            localStorage.removeItem('youtubeCookies'); // Remove manual cookies if browser is selected
+            cookiesModal.style.display = 'none';
+            showSuccess(`Cookies will be extracted from ${selectedBrowser} automatically! 🎉`);
+            cookiesInput.value = '';
+            browserSelect.value = '';
+            return;
+        } catch (e) {
+            showError('Failed to save browser preference. 😅');
+            return;
+        }
+    }
+    
+    // Manual cookies
     if (!cookiesContent) {
-        showError('Please paste your cookies content! 🍪');
+        showError('Please paste your cookies content or select a browser! 🍪');
         return;
     }
     
@@ -108,11 +128,13 @@ saveCookiesBtn.addEventListener('click', () => {
     // Save cookies to localStorage
     try {
         localStorage.setItem('youtubeCookies', cookiesContent);
+        localStorage.removeItem('youtubeCookiesBrowser'); // Remove browser preference if manual cookies are used
         cookiesModal.style.display = 'none';
         showSuccess('Cookies saved successfully! You can now convert videos. 🎉');
         
         // Clear the textarea
         cookiesInput.value = '';
+        browserSelect.value = '';
     } catch (e) {
         showError('Failed to save cookies. Your browser may not support localStorage. 😅');
     }

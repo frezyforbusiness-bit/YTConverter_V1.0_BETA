@@ -55,7 +55,7 @@ class YouTubeAudioConverter:
         
         return True
     
-    def download_video(self, youtube_url, get_info_only=False, cookies_content=None):
+    def download_video(self, youtube_url, get_info_only=False, cookies_content=None, browser_name=None):
         """
         Scarica il video YouTube come file temporaneo o estrae solo le informazioni
         
@@ -63,6 +63,7 @@ class YouTubeAudioConverter:
             youtube_url: URL del video YouTube
             get_info_only: Se True, estrae solo le info senza scaricare
             cookies_content: Optional cookies.txt content as string (Netscape format)
+            browser_name: Optional browser name to extract cookies from ('firefox', 'chrome', 'chromium', 'edge', 'opera', 'brave', 'vivaldi')
         
         Returns:
             tuple: (video_path, video_info) se get_info_only=False
@@ -124,6 +125,18 @@ class YouTubeAudioConverter:
         if cookies_file and os.path.exists(cookies_file):
             ydl_opts['cookiefile'] = cookies_file
             print("Using cookies file for authentication")
+        # Or try to extract cookies from browser if browser_name is provided
+        elif browser_name:
+            try:
+                # Supported browsers: firefox, chrome, chromium, edge, opera, brave, vivaldi
+                valid_browsers = ['firefox', 'chrome', 'chromium', 'edge', 'opera', 'brave', 'vivaldi']
+                if browser_name.lower() in valid_browsers:
+                    ydl_opts['cookiesfrombrowser'] = (browser_name.lower(),)
+                    print(f"Attempting to extract cookies from {browser_name} browser")
+                else:
+                    print(f"Warning: Unsupported browser '{browser_name}'. Supported: {', '.join(valid_browsers)}")
+            except Exception as e:
+                print(f"Warning: Could not configure browser cookies extraction: {e}")
         
         video_path = None
         last_error = None
