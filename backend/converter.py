@@ -187,36 +187,36 @@ class YouTubeAudioConverter:
                     print(f"Successfully downloaded using client: {client_config}")
                     return video_path, info
                     
-                except Exception as e:
-                    error_msg = str(e)
-                    last_error = e
-                    print(f"Failed with client {client_config}: {error_msg}")
-                    
-                    # Se è un errore di bot detection, prova il prossimo client
-                    if 'bot' in error_msg.lower() or 'sign in' in error_msg.lower():
-                        print(f"Bot detection error, trying next client...")
-                        continue
-                    # Se è un errore di player response, prova il prossimo client
-                    elif 'player response' in error_msg.lower() or 'failed to extract' in error_msg.lower():
-                        print(f"Player response error, trying next client...")
-                        continue
-                    # Se è un errore di playlist, rilanciamo subito
-                    elif 'playlist' in error_msg.lower():
-                        raise ValueError("Playlists are not supported. Use a single video URL.")
-                    else:
-                        # Per altri errori, proviamo comunque il prossimo client
-                        print(f"Other error, trying next client...")
-                        continue
-        
-            # Se arriviamo qui, tutti i client hanno fallito
-            if last_error:
-                error_msg = str(last_error)
+            except Exception as e:
+                error_msg = str(e)
+                last_error = e
+                print(f"Failed with client {client_config}: {error_msg}")
+                
+                # Se è un errore di bot detection, prova il prossimo client
                 if 'bot' in error_msg.lower() or 'sign in' in error_msg.lower():
-                    raise Exception("YouTube is blocking the request. This video may require authentication or the service is temporarily unavailable. Please try again later or use a different video.")
+                    print(f"Bot detection error, trying next client...")
+                    continue
+                # Se è un errore di player response, prova il prossimo client
+                elif 'player response' in error_msg.lower() or 'failed to extract' in error_msg.lower():
+                    print(f"Player response error, trying next client...")
+                    continue
+                # Se è un errore di playlist, rilanciamo subito
+                elif 'playlist' in error_msg.lower():
+                    raise ValueError("Playlists are not supported. Use a single video URL.")
                 else:
-                    raise Exception(f"Error during download after trying all clients: {error_msg}")
+                    # Per altri errori, proviamo comunque il prossimo client
+                    print(f"Other error, trying next client...")
+                    continue
+        
+        # Se arriviamo qui, tutti i client hanno fallito
+        if last_error:
+            error_msg = str(last_error)
+            if 'bot' in error_msg.lower() or 'sign in' in error_msg.lower():
+                raise Exception("YouTube is blocking the request. This video may require authentication or the service is temporarily unavailable. Please try again later or use a different video.")
             else:
-                raise Exception("Failed to download video: Unknown error")
+                raise Exception(f"Error during download after trying all clients: {error_msg}")
+        else:
+            raise Exception("Failed to download video: Unknown error")
     
     def convert_to_audio(self, video_path, audio_format, output_path=None):
         """
