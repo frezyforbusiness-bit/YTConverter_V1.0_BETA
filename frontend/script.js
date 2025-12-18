@@ -32,47 +32,6 @@ function hideMessages() {
 const cookiesBanner = document.getElementById('cookiesBanner');
 const acceptCookiesBtn = document.getElementById('acceptCookies');
 
-// Detect browser automatically
-function detectBrowser() {
-    const userAgent = navigator.userAgent.toLowerCase();
-    
-    // Firefox
-    if (userAgent.includes('firefox') && !userAgent.includes('seamonkey')) {
-        return 'firefox';
-    }
-    // Chrome (but not Edge, Opera, etc.)
-    if (userAgent.includes('chrome') && !userAgent.includes('edg') && !userAgent.includes('opr') && !userAgent.includes('brave')) {
-        return 'chrome';
-    }
-    // Edge
-    if (userAgent.includes('edg')) {
-        return 'edge';
-    }
-    // Opera
-    if (userAgent.includes('opr') || userAgent.includes('opera')) {
-        return 'opera';
-    }
-    // Brave
-    if (userAgent.includes('brave')) {
-        return 'brave';
-    }
-    // Chromium
-    if (userAgent.includes('chromium')) {
-        return 'chromium';
-    }
-    // Vivaldi
-    if (userAgent.includes('vivaldi')) {
-        return 'vivaldi';
-    }
-    // Safari (not directly supported by yt-dlp, but we can try chrome)
-    if (userAgent.includes('safari') && !userAgent.includes('chrome')) {
-        return 'chrome'; // Try chrome as fallback
-    }
-    
-    // Default fallback
-    return 'chrome';
-}
-
 // Check if user has already accepted/declined cookies
 function checkCookiesConsent() {
     const cookiesConsent = localStorage.getItem('cookiesConsent');
@@ -82,21 +41,12 @@ function checkCookiesConsent() {
     }
 }
 
-// Handle accept cookies - automatically detect and save browser
+// Handle accept cookies
 acceptCookiesBtn.addEventListener('click', () => {
     localStorage.setItem('cookiesConsent', 'accepted');
     cookiesBanner.style.display = 'none';
     // Set a cookie to remember the choice (for backend if needed)
     document.cookie = 'cookiesConsent=accepted; path=/; max-age=31536000'; // 1 year
-    
-    // Automatically detect browser and save preference
-    const detectedBrowser = detectBrowser();
-    try {
-        localStorage.setItem('youtubeCookiesBrowser', detectedBrowser);
-        console.log(`Auto-detected browser: ${detectedBrowser}`);
-    } catch (e) {
-        console.error('Failed to save browser preference:', e);
-    }
 });
 
 // Terms link handler (optional - can link to terms page)
@@ -286,23 +236,21 @@ form.addEventListener('submit', async (e) => {
     let pollInterval = null;
     
     try {
-        // Automatically detect browser and use it for cookie extraction
-        const detectedBrowser = detectBrowser();
-        const manualCookies = localStorage.getItem('youtubeCookiesManual');
+        // Get saved cookies if available (optional - for restricted videos)
+        const savedCookies = localStorage.getItem('youtubeCookiesManual');
         
         // Invia richiesta al backend per avviare la conversione
         const requestBody = {
             url: youtubeUrl,
-            format: audioFormat,
-            browser: detectedBrowser  // Always send browser for automatic cookie extraction
+            format: audioFormat
         };
         
-        // Add manual cookies if available (takes priority)
-        if (manualCookies) {
-            requestBody.cookies = manualCookies;
-            console.log('Using manual cookies (fallback)');
+        // Add cookies if available (optional - helps with restricted videos)
+        if (savedCookies) {
+            requestBody.cookies = savedCookies;
+            console.log('Using saved cookies for authentication');
         } else {
-            console.log(`Using browser: ${detectedBrowser} for automatic cookie extraction`);
+            console.log('No cookies provided - will try without (may fail on restricted videos)');
         }
                
                const response = await fetch(`${API_URL}/convert`, {
@@ -326,13 +274,14 @@ form.addEventListener('submit', async (e) => {
             } catch (e) {
                 errorMsg = `Error ${response.status}: ${response.statusText}`;
             }
-                    // Check if error indicates cookies are required
-                    if (errorMsg.includes('COOKIES_REQUIRED') || 
-                        errorMsg.includes('could not find') && errorMsg.includes('cookies')) {
-                        // Show manual cookies modal
+                    // Check if error indicates cookies might help
+                    if (errorMsg.includes('cookies') || 
+                        errorMsg.includes('authentication') || 
+                        errorMsg.includes('blocking')) {
+                        // Show manual cookies modal as suggestion
                         pendingConversion = { url: youtubeUrl, format: audioFormat };
                         cookiesManualModal.style.display = 'flex';
-                        showError('Automatic cookie extraction failed. Please provide cookies manually. 🍪');
+                        showError('YouTube is blocking the request. Providing cookies may help. 🍪');
                     } else {
                         showError(errorMsg);
                     }
