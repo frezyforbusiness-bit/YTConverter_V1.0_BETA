@@ -81,149 +81,84 @@ class YouTubeAudioConverter:
         if not self.validate_youtube_url(youtube_url):
             raise ValueError("Invalid YouTube URL")
         
-        # Base yt-dlp configuration (production-ready, headless)
-        base_opts = {
+        # Optimized yt-dlp configuration for cloud environments (Render, Docker, VPS)
+        # Using mweb client only - often less blocked on cloud
+        # Force IPv4 - important for Render (often prefers IPv6 which breaks YouTube)
+        ydl_opts = {
             'format': 'bestaudio/best',
             'outtmpl': os.path.join(self.temp_dir, '%(title)s.%(ext)s'),
-            'quiet': True,
-            'no_warnings': False,
             'noplaylist': True,
-            'extract_flat': False,
-            
-            # Modern user agent (helps avoid basic bot detection)
-            'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            
-            # Realistic HTTP headers (mimics real browser)
-            'http_headers': {
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-                'Accept-Language': 'en-US,en;q=0.9',
-                'Accept-Encoding': 'gzip, deflate, br',
-                'Sec-Fetch-Dest': 'document',
-                'Sec-Fetch-Mode': 'navigate',
-                'Sec-Fetch-Site': 'none',
-                'Sec-Fetch-User': '?1',
-                'Upgrade-Insecure-Requests': '1',
-                'Cache-Control': 'max-age=0',
-            },
-            
-            # Retry configuration (robust against temporary failures)
+            'quiet': True,
+            'cachedir': False,
+            'force_ipv4': True,  # Force IPv4 - critical for Render
             'retries': 5,
-            'fragment_retries': 5,
-            'file_access_retries': 5,
             'socket_timeout': 30,
-            'concurrent_fragments': 1,  # Reduce concurrent requests to avoid detection
-            
-            # Anti-bot options
-            'geo_bypass': True,
-            'age_limit': None,
-            
-            # Security options
-            'no_check_certificate': False,
-            'prefer_insecure': False,
-            'prefer_free_formats': False,
-            
-            # Additional options to help with extraction
-            'ignoreerrors': False,
-            'no_warnings': False,
+            'extractor_args': {
+                'youtube': {
+                    'player_client': ['mweb'],  # Mobile web client - less blocked on cloud
+                }
+            }
         }
         
-        # Player clients to try in priority order (iOS → Android → Web)
-        # iOS client is least blocked, web client is most compatible
-        player_clients = [
-            ['ios'],      # Priority 1: Mobile iOS client (least blocked)
-            ['android'],  # Priority 2: Mobile Android client
-            ['web'],      # Priority 3: Standard web client
-            ['mweb'],     # Priority 4: Mobile web client (fallback)
-        ]
-        
-        video_path = None
-        last_error = None
-        last_client = None
-        
-        # Try each player client in order
-        for client_list in player_clients:
-            try:
-                # Build options for this client
-                current_opts = base_opts.copy()
-                current_opts['extractor_args'] = {
-                    'youtube': {
-                        'player_client': client_list,
-                        'player_skip': ['webpage', 'configs'],  # Skip unnecessary data
-                    }
-                }
-                
-                # Small delay between retries to avoid rate limiting
-                if last_error:
-                    import time
-                    time.sleep(1.0)  # Increased delay to avoid rate limiting
-                
-                print(f"Trying player client: {client_list[0]}")
-                
-                # Extract info first (validates URL and checks for playlists)
-                with yt_dlp.YoutubeDL(current_opts) as ydl:
-                    info = ydl.extract_info(youtube_url, download=False)
-                
-                # Validate: reject playlists
-                if info.get('_type') == 'playlist':
+        try:
+            print("Downloading video using mweb client (optimized for cloud)...")
+            
+            # Extract info first (validates URL and checks for playlists)
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(youtube_url, download=False)
+            
+            # Validate: reject playlists
+            if info.get('_type') == 'playlist':
+                raise ValueError("Playlists are not supported. Use a single video URL.")
+            
+            # Handle single-entry playlists (YouTube sometimes returns this)
+            if 'entries' in info and info['entries']:
+                entries = list(info['entries'])
+                if len(entries) > 1:
                     raise ValueError("Playlists are not supported. Use a single video URL.")
-                
-                # Handle single-entry playlists (YouTube sometimes returns this)
-                if 'entries' in info and info['entries']:
-                    entries = list(info['entries'])
-                    if len(entries) > 1:
-                        raise ValueError("Playlists are not supported. Use a single video URL.")
-                    if len(entries) == 1:
-                        info = entries[0]
-                
-                # Validate video ID
-                if not info.get('id'):
-                    raise ValueError("Unable to extract video information. Check that the URL is correct.")
-                
-                # If only info is needed, return now
-                if get_info_only:
-                    return None, info
-                
-                # Download the video
-                with yt_dlp.YoutubeDL(current_opts) as ydl:
-                    info = ydl.extract_info(youtube_url, download=True)
-                    video_path = ydl.prepare_filename(info)
-                
-                # Handle different file extensions (yt-dlp may download with different extension)
-                if not os.path.exists(video_path):
-                    base_name = os.path.splitext(video_path)[0]
-                    for ext in ['.webm', '.m4a', '.mp4', '.opus', '.ogg']:
-                        potential_path = base_name + ext
-                        if os.path.exists(potential_path):
-                            video_path = potential_path
-                            break
-                
-                # Final validation
-                if not os.path.exists(video_path):
-                    raise FileNotFoundError("Video file not found after download")
-                
-                # Success!
-                print(f"Successfully downloaded using client: {client_list[0]}")
-                return video_path, info
-                
-            except Exception as e:
-                error_msg = str(e)
-                last_error = e
-                last_client = client_list[0]
-                print(f"Client {client_list[0]} failed: {error_msg[:100]}...")
-                
-                # Don't retry on playlist errors (user error)
-                if 'playlist' in error_msg.lower():
-                    raise ValueError("Playlists are not supported. Use a single video URL.")
-                
-                # Continue to next client for other errors
-                continue
-        
-        # All clients failed - provide clear error message
-        if last_error:
-            error_msg = str(last_error)
+                if len(entries) == 1:
+                    info = entries[0]
+            
+            # Validate video ID
+            if not info.get('id'):
+                raise ValueError("Unable to extract video information. Check that the URL is correct.")
+            
+            # If only info is needed, return now
+            if get_info_only:
+                return None, info
+            
+            # Download the video
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(youtube_url, download=True)
+                video_path = ydl.prepare_filename(info)
+            
+            # Handle different file extensions (yt-dlp may download with different extension)
+            if not os.path.exists(video_path):
+                base_name = os.path.splitext(video_path)[0]
+                for ext in ['.webm', '.m4a', '.mp4', '.opus', '.ogg']:
+                    potential_path = base_name + ext
+                    if os.path.exists(potential_path):
+                        video_path = potential_path
+                        break
+            
+            # Final validation
+            if not os.path.exists(video_path):
+                raise FileNotFoundError("Video file not found after download")
+            
+            # Success!
+            print("Successfully downloaded video")
+            return video_path, info
+            
+        except Exception as e:
+            error_msg = str(e)
+            print(f"Download failed: {error_msg[:200]}...")
+            
+            # Don't retry on playlist errors (user error)
+            if 'playlist' in error_msg.lower():
+                raise ValueError("Playlists are not supported. Use a single video URL.")
+            
+            # Raise error with clear message
             self._raise_download_error(error_msg)
-        else:
-            raise Exception("Failed to download video: Unknown error")
     
     def _raise_download_error(self, error_msg):
         """
