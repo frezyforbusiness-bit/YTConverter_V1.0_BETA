@@ -116,19 +116,18 @@ class YouTubeAudioConverter:
         video_path = None
         last_error = None
         
-        try:
-            # Prova con diversi client se il primo fallisce
-            # Ordine: iOS (meno bloccato), poi Android, poi web variants
-            clients_to_try = [
-                {'player_client': ['ios']},
-                {'player_client': ['android']},
-                {'player_client': ['android_embedded']},
-                {'player_client': ['web']},
-                {'player_client': ['mweb']},
-                {'player_client': ['tv_embedded']},
-            ]
-            
-            for client_config in clients_to_try:
+        # Prova con diversi client se il primo fallisce
+        # Ordine: iOS (meno bloccato), poi Android, poi web variants
+        clients_to_try = [
+            {'player_client': ['ios']},
+            {'player_client': ['android']},
+            {'player_client': ['android_embedded']},
+            {'player_client': ['web']},
+            {'player_client': ['mweb']},
+            {'player_client': ['tv_embedded']},
+        ]
+        
+        for client_config in clients_to_try:
                 try:
                     # Aggiorna la configurazione con il client corrente
                     current_opts = ydl_opts.copy()
