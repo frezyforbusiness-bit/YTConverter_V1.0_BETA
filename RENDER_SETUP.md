@@ -102,14 +102,30 @@ Per evitare errori "Sign in to confirm you're not a bot" da YouTube:
 
 **⚠️ Se ricevi "argument list too long"**, il file è troppo grande. Usa il Metodo 2.
 
-##### Metodo 2: Upload via SSH (CONSIGLIATO per file grandi)
+##### Metodo 2: Upload via API (CONSIGLIATO per file grandi) 🚀
 
-Vedi la guida completa in `RENDER_COOKIES_SETUP.md` per istruzioni dettagliate.
+**Il metodo più semplice! Carica il file dalla tua macchina usando curl.**
 
-**In breve:**
-1. Dopo il deploy, vai su Render Dashboard → Il tuo servizio → **Shell**
-2. Crea il file: `mkdir -p /app/backend && cd /app/backend`
-3. Carica cookies.txt usando `nano` o `cat`
+1. **Configura un token su Render:**
+   - Environment → Aggiungi `UPLOAD_TOKEN` (es: `my-secret-123`)
+
+2. **Carica il file dalla tua macchina:**
+   ```bash
+   curl -X POST https://your-render-url.onrender.com/admin/upload-cookies \
+        -H "Authorization: Bearer my-secret-123" \
+        -F "file=@backend/cookies.txt"
+   ```
+
+3. **Fatto!** Il file verrà salvato automaticamente.
+
+Vedi `RENDER_COOKIES_SETUP.md` per istruzioni dettagliate e metodi alternativi.
+
+##### Metodo 3: Upload via Render Shell (Alternativa)
+
+Se preferisci usare la Shell web di Render:
+1. Dashboard → Il tuo servizio → **Shell**
+2. `mkdir -p /app/backend && cd /app/backend`
+3. `nano cookies.txt` (incolla il contenuto)
 4. Riavvia il servizio
 
 Il file cookies.txt verrà trovato automaticamente all'avvio del server!

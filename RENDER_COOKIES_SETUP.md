@@ -4,9 +4,50 @@
 
 Se hai ricevuto l'errore `exec /usr/local/bin/run-buildkit.sh: argument list too long`, significa che la variabile d'ambiente `COOKIES_BASE64` è troppo lunga per Render.
 
-## ✅ Soluzione Consigliata: Caricare il file via SSH
+## ✅ Soluzioni Disponibili
 
-### Metodo 1: Upload via Render Shell (CONSIGLIATO)
+### Metodo 1: Upload via API (PIÙ SEMPLICE - CONSIGLIATO) 🚀
+
+**Questo metodo ti permette di caricare il file dalla tua macchina usando curl!**
+
+1. **Configura un token di sicurezza su Render:**
+   - Vai su Render Dashboard → Il tuo servizio → **Environment**
+   - Aggiungi variabile d'ambiente:
+     - **Key**: `UPLOAD_TOKEN`
+     - **Value**: (genera un token casuale, es: `my-secret-token-12345`)
+     - Salva
+
+2. **Carica il file dalla tua macchina:**
+   ```bash
+   curl -X POST https://your-render-url.onrender.com/admin/upload-cookies \
+        -H "Authorization: Bearer my-secret-token-12345" \
+        -F "file=@backend/cookies.txt"
+   ```
+   
+   Sostituisci:
+   - `https://your-render-url.onrender.com` con l'URL del tuo servizio Render
+   - `my-secret-token-12345` con il token che hai impostato
+
+3. **Verifica il successo:**
+   Dovresti ricevere una risposta JSON:
+   ```json
+   {
+     "success": true,
+     "message": "Cookies file uploaded successfully",
+     "path": "/app/backend/cookies.txt",
+     "size": 386700
+   }
+   ```
+
+4. **Riavvia il servizio** su Render (opzionale, ma consigliato)
+
+**Vantaggi:**
+- ✅ Funziona dalla tua macchina locale
+- ✅ Non serve SSH
+- ✅ Veloce e semplice
+- ✅ Protetto da token
+
+### Metodo 2: Upload via Render Shell (Alternativa)
 
 1. **Dopo il deploy su Render**, vai su:
    - Dashboard → Il tuo servizio → **Shell** (o **SSH**)

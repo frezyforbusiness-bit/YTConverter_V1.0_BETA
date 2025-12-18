@@ -221,6 +221,72 @@ def health():
     return jsonify({"status": "ok"})
 
 
+@app.route('/admin/upload-cookies', methods=['POST'])
+def upload_cookies():
+    """
+    Endpoint per caricare il file cookies.txt via API.
+    Protetto da token semplice (variabile d'ambiente UPLOAD_TOKEN).
+    
+    Uso:
+    curl -X POST https://your-render-url.onrender.com/admin/upload-cookies \
+         -H "Authorization: Bearer YOUR_TOKEN" \
+         -F "file=@cookies.txt"
+    """
+    # Verifica token di autorizzazione
+    upload_token = os.environ.get('UPLOAD_TOKEN')
+    if not upload_token:
+        return jsonify({"error": "Upload token not configured"}), 503
+    
+    auth_header = request.headers.get('Authorization', '')
+    if not auth_header.startswith('Bearer '):
+        return jsonify({"error": "Missing or invalid Authorization header"}), 401
+    
+    provided_token = auth_header.replace('Bearer ', '').strip()
+    if provided_token != upload_token:
+        return jsonify({"error": "Invalid token"}), 401
+    
+    # Verifica che ci sia un file nella richiesta
+    if 'file' not in request.files:
+        return jsonify({"error": "No file provided. Use: curl -F 'file=@cookies.txt' ..."}), 400
+    
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({"error": "No file selected"}), 400
+    
+    # Verifica che sia cookies.txt
+    if file.filename != 'cookies.txt':
+        return jsonify({"error": "File must be named 'cookies.txt'"}), 400
+    
+    try:
+        # Salva il file nella directory backend
+        backend_dir = os.path.dirname(os.path.abspath(__file__))
+        cookies_path = os.path.join(backend_dir, 'cookies.txt')
+        
+        file.save(cookies_path)
+        
+        # Verifica che il file sia stato salvato
+        if not os.path.exists(cookies_path):
+            return jsonify({"error": "Failed to save file"}), 500
+        
+        file_size = os.path.getsize(cookies_path)
+        
+        # Aggiorna il path nel converter
+        converter.cookies_path = cookies_path
+        
+        return jsonify({
+            "success": True,
+            "message": "Cookies file uploaded successfully",
+            "path": cookies_path,
+            "size": file_size
+        })
+    
+    except Exception as e:
+        error_msg = str(e)
+        print(f"Error uploading cookies file: {error_msg}")
+        print(traceback.format_exc())
+        return jsonify({"error": f"Upload failed: {error_msg}"}), 500
+
+
 if __name__ == '__main__':
     # Check if ffmpeg is available
     print("Checking for ffmpeg...")
