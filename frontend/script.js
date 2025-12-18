@@ -42,12 +42,31 @@ function checkCookiesConsent() {
     }
 }
 
+// Cookies Modal Management
+const cookiesModal = document.getElementById('cookiesModal');
+const closeCookiesModal = document.getElementById('closeCookiesModal');
+const cookiesInput = document.getElementById('cookiesInput');
+const saveCookiesBtn = document.getElementById('saveCookies');
+const skipCookiesBtn = document.getElementById('skipCookies');
+
+// Check if cookies are already saved
+function hasCookiesSaved() {
+    return localStorage.getItem('youtubeCookies') !== null;
+}
+
 // Handle accept cookies
 acceptCookiesBtn.addEventListener('click', () => {
     localStorage.setItem('cookiesConsent', 'accepted');
     cookiesBanner.style.display = 'none';
     // Set a cookie to remember the choice (for backend if needed)
     document.cookie = 'cookiesConsent=accepted; path=/; max-age=31536000'; // 1 year
+    
+    // Show cookies setup modal if cookies are not saved
+    if (!hasCookiesSaved()) {
+        setTimeout(() => {
+            cookiesModal.style.display = 'flex';
+        }, 300);
+    }
 });
 
 // Handle decline cookies
@@ -56,6 +75,53 @@ declineCookiesBtn.addEventListener('click', () => {
     cookiesBanner.style.display = 'none';
     // Still set a cookie to remember the choice
     document.cookie = 'cookiesConsent=declined; path=/; max-age=31536000'; // 1 year
+});
+
+// Close modal handlers
+closeCookiesModal.addEventListener('click', () => {
+    cookiesModal.style.display = 'none';
+});
+
+// Close modal when clicking outside
+cookiesModal.addEventListener('click', (e) => {
+    if (e.target === cookiesModal) {
+        cookiesModal.style.display = 'none';
+    }
+});
+
+// Save cookies
+saveCookiesBtn.addEventListener('click', () => {
+    const cookiesContent = cookiesInput.value.trim();
+    
+    if (!cookiesContent) {
+        showError('Please paste your cookies content! 🍪');
+        return;
+    }
+    
+    // Basic validation: should contain youtube.com
+    if (!cookiesContent.includes('youtube.com')) {
+        showError('This doesn\'t look like YouTube cookies. Make sure you exported cookies for YouTube! 🍪');
+        return;
+    }
+    
+    // Save cookies to localStorage
+    try {
+        localStorage.setItem('youtubeCookies', cookiesContent);
+        cookiesModal.style.display = 'none';
+        showSuccess('Cookies saved successfully! You can now convert videos. 🎉');
+        
+        // Clear the textarea
+        cookiesInput.value = '';
+    } catch (e) {
+        showError('Failed to save cookies. Your browser may not support localStorage. 😅');
+    }
+});
+
+// Skip cookies (try without)
+skipCookiesBtn.addEventListener('click', () => {
+    localStorage.setItem('youtubeCookies', 'skipped');
+    cookiesModal.style.display = 'none';
+    showSuccess('You can try converting without cookies. If it fails, you can add cookies later. 👍');
 });
 
 // Check cookies consent on page load
@@ -176,12 +242,19 @@ form.addEventListener('submit', async (e) => {
     let pollInterval = null;
     
     try {
+        // Get saved cookies
+        const savedCookies = localStorage.getItem('youtubeCookies');
+        
         // Invia richiesta al backend per avviare la conversione
-        // Cookies will be handled automatically by the backend
         const requestBody = {
             url: youtubeUrl,
             format: audioFormat
         };
+        
+        // Add cookies if available (and not skipped)
+        if (savedCookies && savedCookies !== 'skipped') {
+            requestBody.cookies = savedCookies;
+        }
                
                const response = await fetch(`${API_URL}/convert`, {
                    method: 'POST',

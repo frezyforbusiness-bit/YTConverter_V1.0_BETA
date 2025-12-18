@@ -550,3 +550,218 @@ footer {
         max-width: 150px;
     }
 }
+
+/* Cookies Modal */
+.cookies-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.85);
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.cookies-modal-content {
+    background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+    border: 2px solid #4a4a4a;
+    border-radius: 20px;
+    max-width: 700px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.9);
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        transform: translateY(-50px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.cookies-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 25px 30px;
+    border-bottom: 2px solid #4a4a4a;
+}
+
+.cookies-modal-header h2 {
+    font-family: 'Orbitron', sans-serif;
+    color: #e0e0e0;
+    margin: 0;
+    font-size: 1.8rem;
+}
+
+.close-modal-btn {
+    background: transparent;
+    border: none;
+    color: #a0a0a0;
+    font-size: 2rem;
+    cursor: pointer;
+    padding: 0;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+}
+
+.close-modal-btn:hover {
+    background: #3a3a3a;
+    color: #e0e0e0;
+    transform: rotate(90deg);
+}
+
+.cookies-modal-body {
+    padding: 30px;
+}
+
+.cookies-modal-body p {
+    font-family: 'Rajdhani', sans-serif;
+    color: #d0d0d0;
+    font-size: 1.1rem;
+    margin-bottom: 20px;
+    line-height: 1.6;
+}
+
+.cookies-steps {
+    font-family: 'Rajdhani', sans-serif;
+    color: #d0d0d0;
+    font-size: 1rem;
+    line-height: 1.8;
+    margin: 20px 0;
+    padding-left: 25px;
+}
+
+.cookies-steps li {
+    margin-bottom: 15px;
+}
+
+.cookies-steps ul {
+    margin-top: 10px;
+    margin-left: 20px;
+    list-style-type: disc;
+}
+
+.cookies-steps a {
+    color: #808080;
+    text-decoration: underline;
+    transition: color 0.3s ease;
+}
+
+.cookies-steps a:hover {
+    color: #a0a0a0;
+}
+
+.cookies-textarea {
+    width: 100%;
+    padding: 15px;
+    border: 2px solid #4a4a4a;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    font-family: 'Courier New', monospace;
+    background: #0a0a0a;
+    color: #e0e0e0;
+    resize: vertical;
+    min-height: 150px;
+    line-height: 1.5;
+}
+
+.cookies-textarea:focus {
+    outline: none;
+    border-color: #808080;
+    box-shadow: 0 0 0 4px rgba(128, 128, 128, 0.2);
+}
+
+.cookies-modal-buttons {
+    display: flex;
+    gap: 15px;
+    margin-top: 25px;
+    justify-content: flex-end;
+}
+
+.btn-save-cookies,
+.btn-skip-cookies {
+    padding: 12px 30px;
+    border: none;
+    border-radius: 10px;
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.btn-save-cookies {
+    background: linear-gradient(135deg, #4a4a4a 0%, #6a6a6a 100%);
+    color: #ffffff;
+    border: 2px solid #808080;
+}
+
+.btn-save-cookies:hover {
+    background: linear-gradient(135deg, #5a5a5a 0%, #7a7a7a 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(128, 128, 128, 0.4);
+}
+
+.btn-skip-cookies {
+    background: transparent;
+    color: #a0a0a0;
+    border: 2px solid #4a4a4a;
+}
+
+.btn-skip-cookies:hover {
+    background: #2a2a2a;
+    color: #c0c0c0;
+    border-color: #6a6a6a;
+}
+
+@media (max-width: 768px) {
+    .cookies-modal-content {
+        max-width: 95%;
+        margin: 10px;
+    }
+    
+    .cookies-modal-header {
+        padding: 20px;
+    }
+    
+    .cookies-modal-body {
+        padding: 20px;
+    }
+    
+    .cookies-modal-buttons {
+        flex-direction: column;
+    }
+    
+    .btn-save-cookies,
+    .btn-skip-cookies {
+        width: 100%;
+    }
+}

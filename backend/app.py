@@ -146,10 +146,11 @@ def convert():
         
         youtube_url = data.get('url')
         audio_format = data.get('format', 'mp3')
-        # Cookies will be handled automatically by the converter
+        cookies_content = data.get('cookies')  # Optional cookies content
         
         print(f"YouTube URL: {youtube_url}")
         print(f"Audio format: {audio_format}")
+        print(f"Cookies provided: {bool(cookies_content)}")
         
         if not youtube_url:
             print("ERROR: YouTube URL missing")
@@ -166,7 +167,7 @@ def convert():
         print(f"Generated task_id: {task_id}")
         
         # Start conversion in separate thread
-        thread = threading.Thread(target=convert_task, args=(task_id, youtube_url, audio_format))
+        thread = threading.Thread(target=convert_task, args=(task_id, youtube_url, audio_format, cookies_content))
         thread.daemon = True
         thread.start()
         
