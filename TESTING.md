@@ -175,3 +175,4 @@ https://your-frontend-url.onrender.com
 3. **Timeout**: Conversioni lunghe potrebbero timeout su free tier
 4. **Logs**: Controlla sempre i logs per debugging
 
+

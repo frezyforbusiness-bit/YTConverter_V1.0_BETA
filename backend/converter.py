@@ -55,15 +55,16 @@ class YouTubeAudioConverter:
         
         return True
     
-    def download_video(self, youtube_url, get_info_only=False, browser_name=None):
+    def download_video(self, youtube_url, get_info_only=False, browser_name=None, cookies_content=None):
         """
         Scarica il video YouTube come file temporaneo o estrae solo le informazioni
-        Cookies vengono estratti automaticamente dal browser specificato
+        Cookies vengono estratti automaticamente dal browser o forniti manualmente
         
         Args:
             youtube_url: URL del video YouTube
             get_info_only: Se True, estrae solo le info senza scaricare
             browser_name: Browser name to extract cookies from ('firefox', 'chrome', 'chromium', 'edge', 'opera', 'brave', 'vivaldi')
+            cookies_content: Optional cookies.txt content as string (Netscape format) - used as fallback
         
         Returns:
             tuple: (video_path, video_info) se get_info_only=False
@@ -71,6 +72,18 @@ class YouTubeAudioConverter:
         """
         if not self.validate_youtube_url(youtube_url):
             raise ValueError("Invalid YouTube URL")
+        
+        # Create temporary cookies file if cookies_content is provided (manual fallback)
+        cookies_file = None
+        if cookies_content:
+            try:
+                cookies_file = os.path.join(self.temp_dir, f'cookies_{uuid.uuid4().hex}.txt')
+                with open(cookies_file, 'w', encoding='utf-8') as f:
+                    f.write(cookies_content)
+                print(f"Created temporary cookies file from manual input: {cookies_file}")
+            except Exception as e:
+                print(f"Warning: Could not create cookies file: {e}")
+                cookies_file = None
         
         # Configurazione yt-dlp ottimizzata per evitare blocchi
         # Prova diversi client in ordine di priorità
@@ -265,14 +278,22 @@ class YouTubeAudioConverter:
                         suggestion += "Cookies are configured but extraction failed. The cookies might be expired or invalid. Try exporting fresh cookies from your browser. "
                     suggestion += "This might also be due to YouTube restrictions or the video being unavailable. Please try again later or use a different video."
                     raise Exception(suggestion)
+                elif 'could not find' in error_msg.lower() and ('cookies' in error_msg.lower() or 'firefox' in error_msg.lower() or 'chrome' in error_msg.lower()):
+                    # Specific error: browser cookies database not found
+                    raise Exception("COOKIES_REQUIRED: Browser cookies not found on server. Please export cookies from your browser and paste them manually.")
                 else:
                     raise Exception(f"Error during download after trying all clients: {error_msg}")
             else:
                 raise Exception("Failed to download video: Unknown error")
         
         finally:
-            # No cleanup needed - cookies are extracted directly from browser
-            pass
+            # Clean up cookies file if it was created from manual input
+            if cookies_file and os.path.exists(cookies_file):
+                try:
+                    os.remove(cookies_file)
+                    print(f"Cleaned up temporary cookies file: {cookies_file}")
+                except Exception as e:
+                    print(f"Warning: Could not remove temporary cookies file {cookies_file}: {e}")
     
     def convert_to_audio(self, video_path, audio_format, output_path=None):
         """

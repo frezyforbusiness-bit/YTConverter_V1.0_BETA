@@ -109,6 +109,65 @@ if (termsLink) {
     });
 }
 
+// Cookies Manual Input Modal (fallback when automatic extraction fails)
+const cookiesManualModal = document.getElementById('cookiesManualModal');
+const closeCookiesManualModal = document.getElementById('closeCookiesManualModal');
+const cookiesManualInput = document.getElementById('cookiesManualInput');
+const saveManualCookiesBtn = document.getElementById('saveManualCookies');
+const cancelManualCookiesBtn = document.getElementById('cancelManualCookies');
+
+// Store the failed conversion data to retry after cookies are provided
+let pendingConversion = null;
+
+closeCookiesManualModal.addEventListener('click', () => {
+    cookiesManualModal.style.display = 'none';
+});
+
+cookiesManualModal.addEventListener('click', (e) => {
+    if (e.target === cookiesManualModal) {
+        cookiesManualModal.style.display = 'none';
+    }
+});
+
+saveManualCookiesBtn.addEventListener('click', () => {
+    const cookiesContent = cookiesManualInput.value.trim();
+    
+    if (!cookiesContent) {
+        showError('Please paste your cookies content! 🍪');
+        return;
+    }
+    
+    if (!cookiesContent.includes('youtube.com')) {
+        showError('This doesn\'t look like YouTube cookies. Make sure you exported cookies for YouTube! 🍪');
+        return;
+    }
+    
+    try {
+        localStorage.setItem('youtubeCookiesManual', cookiesContent);
+        cookiesManualModal.style.display = 'none';
+        cookiesManualInput.value = '';
+        
+        // Retry the conversion if there was a pending one
+        if (pendingConversion) {
+            showSuccess('Cookies saved! Retrying conversion... 🎉');
+            setTimeout(() => {
+                retryConversionWithCookies(pendingConversion, cookiesContent);
+            }, 500);
+            pendingConversion = null;
+        } else {
+            showSuccess('Cookies saved successfully! You can now convert videos. 🎉');
+        }
+    } catch (e) {
+        showError(`Failed to save cookies: ${e.message} 😬`);
+    }
+});
+
+cancelManualCookiesBtn.addEventListener('click', () => {
+    cookiesManualModal.style.display = 'none';
+    cookiesManualInput.value = '';
+    pendingConversion = null;
+});
+
 // Check cookies consent on page load
 checkCookiesConsent();
 
@@ -229,6 +288,7 @@ form.addEventListener('submit', async (e) => {
     try {
         // Automatically detect browser and use it for cookie extraction
         const detectedBrowser = detectBrowser();
+        const manualCookies = localStorage.getItem('youtubeCookiesManual');
         
         // Invia richiesta al backend per avviare la conversione
         const requestBody = {
@@ -237,7 +297,13 @@ form.addEventListener('submit', async (e) => {
             browser: detectedBrowser  // Always send browser for automatic cookie extraction
         };
         
-        console.log(`Using browser: ${detectedBrowser} for automatic cookie extraction`);
+        // Add manual cookies if available (takes priority)
+        if (manualCookies) {
+            requestBody.cookies = manualCookies;
+            console.log('Using manual cookies (fallback)');
+        } else {
+            console.log(`Using browser: ${detectedBrowser} for automatic cookie extraction`);
+        }
                
                const response = await fetch(`${API_URL}/convert`, {
                    method: 'POST',
@@ -260,10 +326,19 @@ form.addEventListener('submit', async (e) => {
             } catch (e) {
                 errorMsg = `Error ${response.status}: ${response.statusText}`;
             }
-            showError(errorMsg);
-            setLoading(false);
-            hideProgress();
-            return;
+                    // Check if error indicates cookies are required
+                    if (errorMsg.includes('COOKIES_REQUIRED') || 
+                        errorMsg.includes('could not find') && errorMsg.includes('cookies')) {
+                        // Show manual cookies modal
+                        pendingConversion = { url: youtubeUrl, format: audioFormat };
+                        cookiesManualModal.style.display = 'flex';
+                        showError('Automatic cookie extraction failed. Please provide cookies manually. 🍪');
+                    } else {
+                        showError(errorMsg);
+                    }
+                    setLoading(false);
+                    hideProgress();
+                    return;
         }
         
         // Get response text first, then parse JSON

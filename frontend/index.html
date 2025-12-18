@@ -22,6 +22,43 @@
         </div>
     </div>
 
+    <!-- Cookies Manual Input Modal (shown when automatic extraction fails) -->
+    <div id="cookiesManualModal" class="cookies-modal" style="display: none;">
+        <div class="cookies-modal-content">
+            <div class="cookies-modal-header">
+                <h2>🍪 Cookies Required</h2>
+                <button id="closeCookiesManualModal" class="close-modal-btn">&times;</button>
+            </div>
+            <div class="cookies-modal-body">
+                <p><strong>Automatic cookie extraction failed.</strong> Please export cookies from your browser and paste them below:</p>
+                <ol class="cookies-steps">
+                    <li>Install a browser extension:
+                        <ul>
+                            <li><strong>Chrome:</strong> <a href="https://chrome.google.com/webstore/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc" target="_blank">Get cookies.txt LOCALLY</a></li>
+                            <li><strong>Firefox:</strong> <a href="https://addons.mozilla.org/en-US/firefox/addon/cookies-txt/" target="_blank">cookies.txt</a></li>
+                        </ul>
+                    </li>
+                    <li>Go to <a href="https://www.youtube.com" target="_blank">YouTube.com</a> and make sure you're logged in</li>
+                    <li>Click the extension icon and export cookies for YouTube</li>
+                    <li>Paste the cookies content below:</li>
+                </ol>
+                <div class="form-group">
+                    <label for="cookiesManualInput">Cookies Content (Netscape format)</label>
+                    <textarea 
+                        id="cookiesManualInput" 
+                        name="cookiesManualInput" 
+                        rows="8"
+                        placeholder="Paste your cookies.txt content here..."
+                        class="cookies-textarea"
+                    ></textarea>
+                </div>
+            </div>
+            <div class="cookies-modal-buttons">
+                <button id="saveManualCookies" class="btn-save-cookies">Save & Retry</button>
+                <button id="cancelManualCookies" class="btn-decline-cookies">Cancel</button>
+            </div>
+        </div>
+    </div>
 
     <div class="container">
         <header>

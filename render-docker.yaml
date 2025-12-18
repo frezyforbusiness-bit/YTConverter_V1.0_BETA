@@ -16,3 +16,4 @@ services:
     staticPublishPath: ./frontend
     plan: free
 
+

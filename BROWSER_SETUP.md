@@ -131,3 +131,4 @@ Se l'estrazione automatica non funziona su Render:
 2. Considera di implementare un fallback (es. richiedere cookies manuali)
 3. Valuta servizi esterni per gestire i cookies
 
+

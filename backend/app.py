@@ -41,7 +41,7 @@ def index():
     })
 
 
-def convert_task(task_id, youtube_url, audio_format, browser_name=None):
+def convert_task(task_id, youtube_url, audio_format, browser_name=None, cookies_content=None):
     """Esegue la conversione in un thread separato"""
     try:
         conversion_status[task_id] = {
@@ -57,7 +57,7 @@ def convert_task(task_id, youtube_url, audio_format, browser_name=None):
             'progress': 20,
             'message': 'Downloading video...'
         })
-        video_path, video_info = converter.download_video(youtube_url, browser_name=browser_name)
+        video_path, video_info = converter.download_video(youtube_url, browser_name=browser_name, cookies_content=cookies_content)
         
         conversion_status[task_id].update({
             'progress': 40,
@@ -146,15 +146,13 @@ def convert():
         
         youtube_url = data.get('url')
         audio_format = data.get('format', 'mp3')
-        browser_name = data.get('browser')  # Browser name for automatic cookie extraction (required)
+        browser_name = data.get('browser')  # Browser name for automatic cookie extraction
+        cookies_content = data.get('cookies')  # Manual cookies content (fallback)
         
         print(f"YouTube URL: {youtube_url}")
         print(f"Audio format: {audio_format}")
         print(f"Browser for automatic cookie extraction: {browser_name if browser_name else 'None'}")
-        
-        # Browser is required for automatic cookie extraction
-        if not browser_name:
-            print("WARNING: No browser specified, will try without cookies (likely to fail)")
+        print(f"Manual cookies provided: {bool(cookies_content)}")
         
         if not youtube_url:
             print("ERROR: YouTube URL missing")
@@ -171,7 +169,7 @@ def convert():
         print(f"Generated task_id: {task_id}")
         
         # Start conversion in separate thread
-        thread = threading.Thread(target=convert_task, args=(task_id, youtube_url, audio_format, browser_name))
+        thread = threading.Thread(target=convert_task, args=(task_id, youtube_url, audio_format, browser_name, cookies_content))
         thread.daemon = True
         thread.start()
         
