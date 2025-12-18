@@ -160,8 +160,13 @@ form.addEventListener('submit', async (e) => {
         
         // Get response text first, then parse JSON
         const responseText = await response.text();
-        if (!responseText) {
-            showError('Empty response from server');
+        console.log('Response status:', response.status);
+        console.log('Response text:', responseText);
+        console.log('Response headers:', [...response.headers.entries()]);
+        
+        if (!responseText || responseText.trim() === '') {
+            console.error('Empty response from server');
+            showError('Empty response from server. Check backend logs or try again.');
             setLoading(false);
             hideProgress();
             return;
@@ -170,8 +175,11 @@ form.addEventListener('submit', async (e) => {
         let data;
         try {
             data = JSON.parse(responseText);
+            console.log('Parsed data:', data);
         } catch (e) {
-            showError(`Invalid response from server: ${e.message}`);
+            console.error('JSON parse error:', e);
+            console.error('Response text was:', responseText);
+            showError(`Invalid response from server: ${e.message}. Response: ${responseText.substring(0, 100)}`);
             setLoading(false);
             hideProgress();
             return;

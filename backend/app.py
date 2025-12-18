@@ -9,7 +9,14 @@ import uuid
 import time
 
 app = Flask(__name__)
-CORS(app)  # Allow cross-origin requests from frontend
+# Configure CORS to allow requests from any origin (for production)
+CORS(app, resources={
+    r"/*": {
+        "origins": "*",
+        "methods": ["GET", "POST", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"]
+    }
+})
 
 # Directory per file temporanei
 TEMP_DIR = tempfile.gettempdir()
@@ -114,37 +121,54 @@ def convert_task(task_id, youtube_url, audio_format):
 
 @app.route('/convert', methods=['POST'])
 def convert():
-    """Endpoint per avviare la conversione (restituisce task_id)"""
+    """Endpoint to start conversion (returns task_id)"""
     try:
+        print("=== /convert endpoint called ===")
+        print(f"Request method: {request.method}")
+        print(f"Content-Type: {request.content_type}")
+        print(f"Headers: {dict(request.headers)}")
+        
         data = request.get_json()
+        print(f"Received data: {data}")
         
         if not data:
+            print("ERROR: No data provided")
             return jsonify({"error": "No data provided"}), 400
         
         youtube_url = data.get('url')
         audio_format = data.get('format', 'mp3')
         
+        print(f"YouTube URL: {youtube_url}")
+        print(f"Audio format: {audio_format}")
+        
         if not youtube_url:
+            print("ERROR: YouTube URL missing")
             return jsonify({"error": "YouTube URL missing"}), 400
         
         # Format validation
         valid_formats = ['mp3', 'wav', 'flac', 'ogg', 'm4a', 'opus']
         if audio_format not in valid_formats:
+            print(f"ERROR: Unsupported format: {audio_format}")
             return jsonify({"error": f"Unsupported format. Valid formats: {', '.join(valid_formats)}"}), 400
         
-        # Genera un task_id univoco
+        # Generate unique task_id
         task_id = str(uuid.uuid4())
+        print(f"Generated task_id: {task_id}")
         
-        # Avvia la conversione in un thread separato
+        # Start conversion in separate thread
         thread = threading.Thread(target=convert_task, args=(task_id, youtube_url, audio_format))
         thread.daemon = True
         thread.start()
         
-        return jsonify({"task_id": task_id})
+        print(f"Thread started for task_id: {task_id}")
+        response_data = {"task_id": task_id}
+        response = jsonify(response_data)
+        print(f"Returning response: {response_data}")
+        return response
     
     except Exception as e:
         error_msg = str(e)
-        print(f"Error: {error_msg}")
+        print(f"EXCEPTION in /convert: {error_msg}")
         print(traceback.format_exc())
         return jsonify({"error": f"Error: {error_msg}"}), 500
 
@@ -190,14 +214,18 @@ def health():
 
 if __name__ == '__main__':
     # Check if ffmpeg is available
+    print("Checking for ffmpeg...")
     if not converter.check_ffmpeg():
         print("ERROR: ffmpeg not found. Make sure it's installed on the system.")
         exit(1)
+    print("✓ ffmpeg found")
     
     # Get port from environment variable or use default
     port = int(os.environ.get('PORT', 5000))
     debug = os.environ.get('FLASK_ENV') == 'development'
     
     print(f"Server starting on http://0.0.0.0:{port}")
+    print(f"Debug mode: {debug}")
+    print("Ready to accept requests...")
     app.run(debug=debug, host='0.0.0.0', port=port)
 
