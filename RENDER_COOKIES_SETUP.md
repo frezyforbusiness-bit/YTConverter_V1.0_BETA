@@ -6,7 +6,35 @@ Se hai ricevuto l'errore `exec /usr/local/bin/run-buildkit.sh: argument list too
 
 ## ✅ Soluzioni Disponibili
 
-### Metodo 1: Upload via API (PIÙ SEMPLICE - CONSIGLIATO) 🚀
+### Metodo 1: Render Secret Files (IL PIÙ SEMPLICE - MIGLIORE) ⭐
+
+**Questo è il metodo ufficiale di Render per file sensibili!**
+
+1. **Vai su Render Dashboard:**
+   - Seleziona il tuo servizio
+   - Vai su **Environment** (nel menu laterale)
+
+2. **Aggiungi Secret File:**
+   - Scorri fino alla sezione **"Secret Files"**
+   - Click **"+ Add Secret File"**
+   - **File Name**: `cookies.txt`
+   - **Contents**: (incolla tutto il contenuto del tuo file `cookies.txt` locale)
+   - Click **"Save Changes"**
+
+3. **Render riavvierà automaticamente** il servizio
+
+4. **Il file sarà disponibile** automaticamente in `/etc/secrets/cookies.txt`
+
+**Vantaggi:**
+- ✅ Metodo ufficiale di Render
+- ✅ Gestito direttamente dal dashboard
+- ✅ Nessun comando da eseguire
+- ✅ Sicuro e persistente
+- ✅ Il codice lo trova automaticamente
+
+**Nota:** Il codice controlla automaticamente `/etc/secrets/cookies.txt` prima del path di default!
+
+### Metodo 2: Upload via API (Alternativa) 🚀
 
 **Questo metodo ti permette di caricare il file dalla tua macchina usando curl!**
 

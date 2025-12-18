@@ -102,7 +102,24 @@ Per evitare errori "Sign in to confirm you're not a bot" da YouTube:
 
 **⚠️ Se ricevi "argument list too long"**, il file è troppo grande. Usa il Metodo 2.
 
-##### Metodo 2: Upload via API (CONSIGLIATO per file grandi) 🚀
+##### Metodo 1: Render Secret Files (IL PIÙ SEMPLICE) ⭐
+
+**Metodo ufficiale di Render - il più semplice!**
+
+1. **Vai su Render Dashboard:**
+   - Il tuo servizio → **Environment**
+   - Scorri fino a **"Secret Files"**
+   - Click **"+ Add Secret File"**
+
+2. **Configura:**
+   - **File Name**: `cookies.txt`
+   - **Contents**: (incolla tutto il contenuto del tuo `cookies.txt` locale)
+
+3. **Salva** → Render riavvierà automaticamente
+
+Il file sarà disponibile in `/etc/secrets/cookies.txt` e il codice lo troverà automaticamente!
+
+##### Metodo 2: Upload via API (Alternativa) 🚀
 
 **Il metodo più semplice! Carica il file dalla tua macchina usando curl.**
 

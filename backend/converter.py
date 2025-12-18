@@ -22,18 +22,35 @@ class YouTubeAudioConverter:
         """
         self.temp_dir = temp_dir or tempfile.gettempdir()
         self.ensure_temp_dir()
-        # Path del file cookies (può essere configurato via env var per produzione)
-        # Se COOKIES_FILE è impostato, usa quello, altrimenti usa il path di default
+        
+        # Path del file cookies - controlla in ordine di priorità:
+        # 1. Variabile d'ambiente COOKIES_FILE (custom path)
+        # 2. Render Secret Files (/etc/secrets/cookies.txt)
+        # 3. Path di default (backend/cookies.txt)
         cookies_file_env = os.environ.get('COOKIES_FILE')
         if cookies_file_env:
             self.cookies_path = cookies_file_env
         else:
-            # Path di default (relativo alla directory backend)
-            backend_dir = os.path.dirname(os.path.abspath(__file__))
-            self.cookies_path = os.path.join(backend_dir, 'cookies.txt')
+            # Controlla prima i Render Secret Files
+            render_secrets_path = '/etc/secrets/cookies.txt'
+            if os.path.exists(render_secrets_path):
+                self.cookies_path = render_secrets_path
+                print(f"✓ Using Render Secret File: {render_secrets_path}")
+            else:
+                # Path di default (relativo alla directory backend)
+                backend_dir = os.path.dirname(os.path.abspath(__file__))
+                self.cookies_path = os.path.join(backend_dir, 'cookies.txt')
         
         # Crea il file cookies da variabile d'ambiente se presente (per Render/produzione)
         self._create_cookies_from_env()
+        
+        # Verifica se il file cookies esiste e informa
+        if os.path.exists(self.cookies_path):
+            file_size = os.path.getsize(self.cookies_path)
+            print(f"✓ Cookies file found: {self.cookies_path} ({file_size} bytes)")
+        else:
+            print(f"⚠ Cookies file not found at: {self.cookies_path}")
+            print(f"   YouTube downloads may fail with bot detection errors.")
     
     def ensure_temp_dir(self):
         """Assicura che la directory temporanea esista"""
