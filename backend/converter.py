@@ -122,10 +122,12 @@ class YouTubeAudioConverter:
             # Opzioni anti-bot
             'geo_bypass': True,
             'age_limit': None,
-            # Retry logic
-            'retries': 3,
-            'fragment_retries': 3,
-            'file_access_retries': 3,
+            # Retry logic - aumentiamo i retry per gestire meglio gli errori temporanei
+            'retries': 5,
+            'fragment_retries': 5,
+            'file_access_retries': 5,
+            # Aggiungi timeout più lunghi
+            'socket_timeout': 30,
         }
         
         # Add cookies file if provided (priority)
@@ -254,7 +256,7 @@ class YouTubeAudioConverter:
                             print(f"WARNING: No cookies configured! YouTube is likely blocking the request. Cookies are REQUIRED for most videos.")
                         elif cookies_file or browser_name:
                             print(f"Note: Cookies are configured but extraction still failing. This might indicate YouTube restrictions or invalid cookies.")
-                        continue
+                            continue
                     # Se è un errore di playlist, rilanciamo subito
                     elif 'playlist' in error_msg.lower():
                         raise ValueError("Playlists are not supported. Use a single video URL.")
@@ -268,12 +270,16 @@ class YouTubeAudioConverter:
                 error_msg = str(last_error)
                 if 'bot' in error_msg.lower() or 'sign in' in error_msg.lower():
                     raise Exception("YouTube is blocking the request. This video may require authentication or the service is temporarily unavailable. Please try again later or use a different video.")
-                elif 'player response' in error_msg.lower() or 'failed to extract' in error_msg.lower():
+                elif ('player response' in error_msg.lower() or 
+                      'failed to extract' in error_msg.lower() or 
+                      'failed to parse json' in error_msg.lower()):
                     # Suggerimenti specifici per questo errore
                     suggestion = "Failed to extract player response from YouTube. "
                     if not cookies_file and not browser_name:
-                        suggestion += "Try adding cookies (export from your browser) as this often resolves the issue. "
-                    suggestion += "This might be due to YouTube restrictions or the video being unavailable. Please try again later or use a different video."
+                        suggestion += "⚠️ COOKIES ARE REQUIRED! Please add your YouTube cookies (export from browser). Without cookies, YouTube blocks most requests. "
+                    elif cookies_file or browser_name:
+                        suggestion += "Cookies are configured but extraction failed. The cookies might be expired or invalid. Try exporting fresh cookies from your browser. "
+                    suggestion += "This might also be due to YouTube restrictions or the video being unavailable. Please try again later or use a different video."
                     raise Exception(suggestion)
                 else:
                     raise Exception(f"Error during download after trying all clients: {error_msg}")
