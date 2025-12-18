@@ -55,22 +55,18 @@ class YouTubeAudioConverter:
         
         return True
     
-    def download_video(self, youtube_url, get_info_only=False, cookies_content=None):
+    def download_video(self, youtube_url, get_info_only=False):
         """
         Downloads YouTube video as temporary file or extracts info only.
         
         Production-ready implementation for Docker/VPS/Render:
         - Headless operation (no browser dependencies)
-        - Optional cookies.txt file support (Netscape format)
-        - Default: works without cookies (may fail on restricted videos)
         - Robust retry logic with multiple player clients
         - Clear error messages for REST API
         
         Args:
             youtube_url: YouTube video URL
             get_info_only: If True, only extracts metadata without downloading
-            cookies_content: Optional cookies.txt content as string (Netscape format)
-                            If provided, creates temporary cookies file for yt-dlp
         
         Returns:
             tuple: (video_path, video_info) if get_info_only=False
@@ -84,18 +80,6 @@ class YouTubeAudioConverter:
         # Validate URL first
         if not self.validate_youtube_url(youtube_url):
             raise ValueError("Invalid YouTube URL")
-        
-        # Create temporary cookies file if cookies_content is provided
-        cookies_file = None
-        if cookies_content:
-            try:
-                cookies_file = os.path.join(self.temp_dir, f'cookies_{uuid.uuid4().hex}.txt')
-                with open(cookies_file, 'w', encoding='utf-8') as f:
-                    f.write(cookies_content)
-                print(f"Using cookies file: {cookies_file}")
-            except Exception as e:
-                print(f"Warning: Could not create cookies file: {e}")
-                cookies_file = None
         
         # Base yt-dlp configuration (production-ready, headless)
         base_opts = {
@@ -142,11 +126,6 @@ class YouTubeAudioConverter:
             'ignoreerrors': False,
             'no_warnings': False,
         }
-        
-        # Add cookies file if provided
-        if cookies_file and os.path.exists(cookies_file):
-            base_opts['cookiefile'] = cookies_file
-            print("Cookies file configured for authentication")
         
         # Player clients to try in priority order (iOS → Android → Web)
         # iOS client is least blocked, web client is most compatible
@@ -243,52 +222,33 @@ class YouTubeAudioConverter:
             # All clients failed - provide clear error message
             if last_error:
                 error_msg = str(last_error)
-                self._raise_download_error(error_msg, cookies_file is not None)
+                self._raise_download_error(error_msg)
             else:
                 raise Exception("Failed to download video: Unknown error")
-        
-        finally:
-            # Clean up temporary cookies file
-            if cookies_file and os.path.exists(cookies_file):
-                try:
-                    os.remove(cookies_file)
-                    print(f"Cleaned up cookies file: {cookies_file}")
-                except Exception as e:
-                    print(f"Warning: Could not remove cookies file: {e}")
     
-    def _raise_download_error(self, error_msg, has_cookies):
+    def _raise_download_error(self, error_msg):
         """
         Raises appropriate exception with clear error message based on error type.
         
         Args:
             error_msg: Original error message from yt-dlp
-            has_cookies: Whether cookies were provided
         """
         error_lower = error_msg.lower()
         
         # Bot detection / authentication required
         if 'bot' in error_lower or 'sign in' in error_lower:
-            if has_cookies:
-                raise Exception("YouTube is blocking the request. The cookies may be expired or invalid. Try exporting fresh cookies from your browser.")
-            else:
-                raise Exception("COOKIES_REQUIRED: YouTube is blocking the request. This video requires authentication. Please provide YouTube cookies (export from your browser using a browser extension).")
+            raise Exception("YouTube is blocking the request. This video may require authentication or the service is temporarily unavailable. Please try again later or use a different video.")
         
         # Player response extraction failed (most common error)
         elif ('player response' in error_lower or 
               'failed to extract' in error_lower or 
               'failed to parse json' in error_lower or
               'unable to extract player version' in error_lower):
-            if has_cookies:
-                raise Exception("Failed to extract player response from YouTube. The cookies may be expired or invalid. Try exporting fresh cookies from your browser, or the video may be unavailable.")
-            else:
-                raise Exception("COOKIES_REQUIRED: Failed to extract player response from YouTube. This video requires cookies for authentication. Please export cookies from your browser (where you're logged into YouTube) and provide them. Most YouTube videos require cookies to download.")
+            raise Exception("Failed to extract player response from YouTube. This might be due to YouTube restrictions or the video being unavailable. Please try again later or use a different video.")
         
         # Generic error
         else:
-            if has_cookies:
-                raise Exception(f"YouTube download failed: {error_msg}. Cookies were provided but may be invalid. Try exporting fresh cookies from your browser.")
-            else:
-                raise Exception(f"COOKIES_REQUIRED: YouTube download failed: {error_msg}. Providing YouTube cookies (export from your browser) is strongly recommended and often required for most videos.")
+            raise Exception(f"YouTube download failed: {error_msg}. Please try again later or use a different video.")
     
     def convert_to_audio(self, video_path, audio_format, output_path=None):
         """

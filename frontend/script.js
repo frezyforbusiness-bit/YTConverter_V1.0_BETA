@@ -28,98 +28,6 @@ function hideMessages() {
     successMessage.style.display = 'none';
 }
 
-// Cookies Banner Management
-const cookiesBanner = document.getElementById('cookiesBanner');
-const acceptCookiesBtn = document.getElementById('acceptCookies');
-
-// Check if user has already accepted/declined cookies
-function checkCookiesConsent() {
-    const cookiesConsent = localStorage.getItem('cookiesConsent');
-    if (cookiesConsent === null) {
-        // Show banner if no consent has been given
-        cookiesBanner.style.display = 'block';
-    }
-}
-
-// Handle accept cookies
-acceptCookiesBtn.addEventListener('click', () => {
-    localStorage.setItem('cookiesConsent', 'accepted');
-    cookiesBanner.style.display = 'none';
-    // Set a cookie to remember the choice (for backend if needed)
-    document.cookie = 'cookiesConsent=accepted; path=/; max-age=31536000'; // 1 year
-});
-
-// Terms link handler (optional - can link to terms page)
-const termsLink = document.querySelector('.cookies-terms-link');
-if (termsLink) {
-    termsLink.addEventListener('click', (e) => {
-        e.preventDefault();
-        // You can add a terms page or modal here
-        alert('Terms of use page - to be implemented');
-    });
-}
-
-// Cookies Manual Input Modal (fallback when automatic extraction fails)
-const cookiesManualModal = document.getElementById('cookiesManualModal');
-const closeCookiesManualModal = document.getElementById('closeCookiesManualModal');
-const cookiesManualInput = document.getElementById('cookiesManualInput');
-const saveManualCookiesBtn = document.getElementById('saveManualCookies');
-const cancelManualCookiesBtn = document.getElementById('cancelManualCookies');
-
-// Store the failed conversion data to retry after cookies are provided
-let pendingConversion = null;
-
-closeCookiesManualModal.addEventListener('click', () => {
-    cookiesManualModal.style.display = 'none';
-});
-
-cookiesManualModal.addEventListener('click', (e) => {
-    if (e.target === cookiesManualModal) {
-        cookiesManualModal.style.display = 'none';
-    }
-});
-
-saveManualCookiesBtn.addEventListener('click', () => {
-    const cookiesContent = cookiesManualInput.value.trim();
-    
-    if (!cookiesContent) {
-        showError('Please paste your cookies content! 🍪');
-        return;
-    }
-    
-    if (!cookiesContent.includes('youtube.com')) {
-        showError('This doesn\'t look like YouTube cookies. Make sure you exported cookies for YouTube! 🍪');
-        return;
-    }
-    
-    try {
-        localStorage.setItem('youtubeCookiesManual', cookiesContent);
-        cookiesManualModal.style.display = 'none';
-        cookiesManualInput.value = '';
-        
-        // Retry the conversion if there was a pending one
-        if (pendingConversion) {
-            showSuccess('Cookies saved! Retrying conversion... 🎉');
-            setTimeout(() => {
-                retryConversionWithCookies(pendingConversion, cookiesContent);
-            }, 500);
-            pendingConversion = null;
-        } else {
-            showSuccess('Cookies saved successfully! You can now convert videos. 🎉');
-        }
-    } catch (e) {
-        showError(`Failed to save cookies: ${e.message} 😬`);
-    }
-});
-
-cancelManualCookiesBtn.addEventListener('click', () => {
-    cookiesManualModal.style.display = 'none';
-    cookiesManualInput.value = '';
-    pendingConversion = null;
-});
-
-// Check cookies consent on page load
-checkCookiesConsent();
 
 // Mostra/nasconde progress bar
 function showProgress(percent, message) {
@@ -203,14 +111,6 @@ form.addEventListener('submit', async (e) => {
     const youtubeUrl = document.getElementById('youtubeUrl').value.trim();
     const audioFormat = document.getElementById('audioFormat').value;
     
-    // Check cookies consent
-    const cookiesConsent = localStorage.getItem('cookiesConsent');
-    if (cookiesConsent !== 'accepted') {
-        showError('Please accept cookies to use this service! 🍪');
-        cookiesBanner.style.display = 'block';
-        return;
-    }
-    
     // URL validation
     if (!youtubeUrl) {
         showError('Come on, paste a YouTube URL! 😅');
@@ -236,22 +136,11 @@ form.addEventListener('submit', async (e) => {
     let pollInterval = null;
     
     try {
-        // Get saved cookies if available (optional - for restricted videos)
-        const savedCookies = localStorage.getItem('youtubeCookiesManual');
-        
         // Invia richiesta al backend per avviare la conversione
         const requestBody = {
             url: youtubeUrl,
             format: audioFormat
         };
-        
-        // Add cookies if available (optional - helps with restricted videos)
-        if (savedCookies) {
-            requestBody.cookies = savedCookies;
-            console.log('Using saved cookies for authentication');
-        } else {
-            console.log('No cookies provided - will try without (may fail on restricted videos)');
-        }
                
                const response = await fetch(`${API_URL}/convert`, {
                    method: 'POST',
@@ -274,17 +163,7 @@ form.addEventListener('submit', async (e) => {
             } catch (e) {
                 errorMsg = `Error ${response.status}: ${response.statusText}`;
             }
-                    // Check if error indicates cookies might help
-                    if (errorMsg.includes('cookies') || 
-                        errorMsg.includes('authentication') || 
-                        errorMsg.includes('blocking')) {
-                        // Show manual cookies modal as suggestion
-                        pendingConversion = { url: youtubeUrl, format: audioFormat };
-                        cookiesManualModal.style.display = 'flex';
-                        showError('YouTube is blocking the request. Providing cookies may help. 🍪');
-                    } else {
-                        showError(errorMsg);
-                    }
+                    showError(errorMsg);
                     setLoading(false);
                     hideProgress();
                     return;
@@ -379,17 +258,7 @@ form.addEventListener('submit', async (e) => {
                 } else if (status.status === 'error') {
                     clearInterval(pollInterval);
                     const errorMsg = status.error || 'Something went wrong during conversion';
-                    
-                    // Check if cookies are required
-                    if (errorMsg.includes('COOKIES_REQUIRED') || 
-                        (errorMsg.includes('cookies') && errorMsg.includes('required'))) {
-                        // Show manual cookies modal
-                        pendingConversion = { url: youtubeUrl, format: audioFormat };
-                        cookiesManualModal.style.display = 'flex';
-                        showError('This video requires YouTube cookies. Please provide them to continue. 🍪');
-                    } else {
-                        showError(errorMsg.includes('playlist') ? 'No playlists, single videos only! 🙄' : `😬 ${errorMsg}`);
-                    }
+                    showError(errorMsg.includes('playlist') ? 'No playlists, single videos only! 🙄' : `😬 ${errorMsg}`);
                     setLoading(false);
                     hideProgress();
                 }
