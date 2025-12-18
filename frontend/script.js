@@ -1,16 +1,12 @@
 // API URL - automatically detects production or development
-// For Render: if frontend and backend are on different subdomains, 
-// you need to set this manually or use environment variable
 let API_URL;
 if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
     API_URL = 'http://localhost:5000';
 } else {
-    // Try to use same origin first (if frontend and backend are on same domain)
-    // Otherwise, you need to set this manually
-    API_URL = window.location.origin;
-    
-    // If you know your backend URL, uncomment and set it:
-    // API_URL = 'https://your-backend-url.onrender.com';
+    // Production: use backend URL
+    // Backend: https://ytconverter-v1-0-betav1.onrender.com
+    // Frontend: https://ytconverter-v1-0-beta-1.onrender.com
+    API_URL = 'https://ytconverter-v1-0-betav1.onrender.com';
 }
 
 console.log('API URL:', API_URL);
