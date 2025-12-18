@@ -79,6 +79,10 @@ Non sono necessari per il funzionamento base, ma puoi aggiungere:
 
 Per evitare errori "Sign in to confirm you're not a bot" da YouTube:
 
+**⚠️ NOTA**: Se ricevi l'errore `argument list too long`, usa il **Metodo 2 (SSH)** invece del Metodo 1.
+
+##### Metodo 1: Variabile d'Ambiente (solo per cookies piccoli < 100KB)
+
 1. **Converti il file cookies.txt in base64:**
    ```bash
    cd backend
@@ -96,7 +100,19 @@ Per evitare errori "Sign in to confirm you're not a bot" da YouTube:
 
 4. **Riavvia il servizio** (Render lo farà automaticamente dopo aver salvato)
 
-Il file cookies.txt verrà creato automaticamente all'avvio del server!
+**⚠️ Se ricevi "argument list too long"**, il file è troppo grande. Usa il Metodo 2.
+
+##### Metodo 2: Upload via SSH (CONSIGLIATO per file grandi)
+
+Vedi la guida completa in `RENDER_COOKIES_SETUP.md` per istruzioni dettagliate.
+
+**In breve:**
+1. Dopo il deploy, vai su Render Dashboard → Il tuo servizio → **Shell**
+2. Crea il file: `mkdir -p /app/backend && cd /app/backend`
+3. Carica cookies.txt usando `nano` o `cat`
+4. Riavvia il servizio
+
+Il file cookies.txt verrà trovato automaticamente all'avvio del server!
 
 ### Step 7: Deploy
 

@@ -43,9 +43,23 @@ class YouTubeAudioConverter:
         """
         Crea il file cookies.txt da variabile d'ambiente COOKIES_BASE64 se presente.
         Utile per deployment su Render/Railway dove non si può committare il file.
+        
+        NOTA: Se COOKIES_BASE64 è troppo lungo (causa "argument list too long" su Render),
+        carica invece il file cookies.txt direttamente via SSH dopo il deploy.
         """
         cookies_base64 = os.environ.get('COOKIES_BASE64')
         if cookies_base64:
+            # Limite di sicurezza: se troppo lungo, potrebbe causare problemi
+            # Render ha un limite di ~128KB per le env vars, ma il processo di build
+            # può avere limiti più stringenti
+            if len(cookies_base64) > 100000:  # ~100KB
+                print(f"⚠ Warning: COOKIES_BASE64 is very long ({len(cookies_base64)} chars)")
+                print(f"   This may cause 'argument list too long' errors on Render.")
+                print(f"   Consider uploading cookies.txt directly via SSH instead.")
+                print(f"   See documentation for alternative methods.")
+                # Non proviamo nemmeno a creare il file se è troppo lungo
+                return
+            
             try:
                 # Decodifica il contenuto base64
                 cookies_content = base64.b64decode(cookies_base64).decode('utf-8')
