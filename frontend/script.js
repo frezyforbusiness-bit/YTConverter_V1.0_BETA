@@ -28,6 +28,39 @@ function hideMessages() {
     successMessage.style.display = 'none';
 }
 
+// Cookies Banner Management
+const cookiesBanner = document.getElementById('cookiesBanner');
+const acceptCookiesBtn = document.getElementById('acceptCookies');
+const declineCookiesBtn = document.getElementById('declineCookies');
+
+// Check if user has already accepted/declined cookies
+function checkCookiesConsent() {
+    const cookiesConsent = localStorage.getItem('cookiesConsent');
+    if (cookiesConsent === null) {
+        // Show banner if no consent has been given
+        cookiesBanner.style.display = 'block';
+    }
+}
+
+// Handle accept cookies
+acceptCookiesBtn.addEventListener('click', () => {
+    localStorage.setItem('cookiesConsent', 'accepted');
+    cookiesBanner.style.display = 'none';
+    // Set a cookie to remember the choice (for backend if needed)
+    document.cookie = 'cookiesConsent=accepted; path=/; max-age=31536000'; // 1 year
+});
+
+// Handle decline cookies
+declineCookiesBtn.addEventListener('click', () => {
+    localStorage.setItem('cookiesConsent', 'declined');
+    cookiesBanner.style.display = 'none';
+    // Still set a cookie to remember the choice
+    document.cookie = 'cookiesConsent=declined; path=/; max-age=31536000'; // 1 year
+});
+
+// Check cookies consent on page load
+checkCookiesConsent();
+
 // Mostra/nasconde progress bar
 function showProgress(percent, message) {
     progressContainer.style.display = 'block';
@@ -107,9 +140,16 @@ form.addEventListener('submit', async (e) => {
     
     hideMessages();
     
-           const youtubeUrl = document.getElementById('youtubeUrl').value.trim();
-           const audioFormat = document.getElementById('audioFormat').value;
-           const cookies = document.getElementById('cookies').value.trim();
+    const youtubeUrl = document.getElementById('youtubeUrl').value.trim();
+    const audioFormat = document.getElementById('audioFormat').value;
+    
+    // Check cookies consent
+    const cookiesConsent = localStorage.getItem('cookiesConsent');
+    if (cookiesConsent !== 'accepted') {
+        showError('Please accept cookies to use this service! 🍪');
+        cookiesBanner.style.display = 'block';
+        return;
+    }
     
     // URL validation
     if (!youtubeUrl) {
@@ -129,18 +169,6 @@ form.addEventListener('submit', async (e) => {
         return;
     }
     
-    // Cookies validation (required)
-    if (!cookies) {
-        showError('Cookies are required! Please export and paste your cookies.txt content. 🍪');
-        return;
-    }
-    
-    // Basic cookies format validation (should contain at least some cookie-like content)
-    if (!cookies.includes('.youtube.com') && !cookies.includes('youtube.com')) {
-        showError('This doesn\'t look like valid YouTube cookies. Make sure you exported cookies for YouTube! 🍪');
-        return;
-    }
-    
     setLoading(true);
     hideMessages();
     showProgress(0, 'Let\'s go! 🚀');
@@ -149,12 +177,11 @@ form.addEventListener('submit', async (e) => {
     
     try {
         // Invia richiesta al backend per avviare la conversione
-               // Prepare request body (cookies are required)
-               const requestBody = {
-                   url: youtubeUrl,
-                   format: audioFormat,
-                   cookies: cookies  // Always include cookies (required)
-               };
+        // Cookies will be handled automatically by the backend
+        const requestBody = {
+            url: youtubeUrl,
+            format: audioFormat
+        };
                
                const response = await fetch(`${API_URL}/convert`, {
                    method: 'POST',
