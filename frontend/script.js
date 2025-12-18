@@ -107,8 +107,9 @@ form.addEventListener('submit', async (e) => {
     
     hideMessages();
     
-    const youtubeUrl = document.getElementById('youtubeUrl').value.trim();
-    const audioFormat = document.getElementById('audioFormat').value;
+           const youtubeUrl = document.getElementById('youtubeUrl').value.trim();
+           const audioFormat = document.getElementById('audioFormat').value;
+           const cookies = document.getElementById('cookies').value.trim();
     
     // URL validation
     if (!youtubeUrl) {
@@ -136,16 +137,24 @@ form.addEventListener('submit', async (e) => {
     
     try {
         // Invia richiesta al backend per avviare la conversione
-        const response = await fetch(`${API_URL}/convert`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                url: youtubeUrl,
-                format: audioFormat
-            })
-        });
+               // Prepare request body
+               const requestBody = {
+                   url: youtubeUrl,
+                   format: audioFormat
+               };
+               
+               // Add cookies if provided
+               if (cookies) {
+                   requestBody.cookies = cookies;
+               }
+               
+               const response = await fetch(`${API_URL}/convert`, {
+                   method: 'POST',
+                   headers: {
+                       'Content-Type': 'application/json',
+                   },
+                   body: JSON.stringify(requestBody)
+               });
         
         if (!response.ok) {
             let errorMsg = 'Error during conversion';

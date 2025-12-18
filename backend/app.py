@@ -41,7 +41,7 @@ def index():
     })
 
 
-def convert_task(task_id, youtube_url, audio_format):
+def convert_task(task_id, youtube_url, audio_format, cookies_content=None):
     """Esegue la conversione in un thread separato"""
     try:
         conversion_status[task_id] = {
@@ -57,7 +57,7 @@ def convert_task(task_id, youtube_url, audio_format):
             'progress': 20,
             'message': 'Downloading video...'
         })
-        video_path, video_info = converter.download_video(youtube_url)
+        video_path, video_info = converter.download_video(youtube_url, cookies_content=cookies_content)
         
         conversion_status[task_id].update({
             'progress': 40,
@@ -146,9 +146,11 @@ def convert():
         
         youtube_url = data.get('url')
         audio_format = data.get('format', 'mp3')
+        cookies_content = data.get('cookies')  # Optional cookies content
         
         print(f"YouTube URL: {youtube_url}")
         print(f"Audio format: {audio_format}")
+        print(f"Cookies provided: {bool(cookies_content)}")
         
         if not youtube_url:
             print("ERROR: YouTube URL missing")
@@ -165,7 +167,7 @@ def convert():
         print(f"Generated task_id: {task_id}")
         
         # Start conversion in separate thread
-        thread = threading.Thread(target=convert_task, args=(task_id, youtube_url, audio_format))
+        thread = threading.Thread(target=convert_task, args=(task_id, youtube_url, audio_format, cookies_content))
         thread.daemon = True
         thread.start()
         

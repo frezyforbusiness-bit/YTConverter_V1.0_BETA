@@ -86,7 +86,8 @@ main {
 .form-group input[type="url"],
 .form-group input[type="number"],
 .form-group input[type="text"],
-.form-group select {
+.form-group select,
+.form-group textarea {
     width: 100%;
     padding: 15px 20px;
     border: 2px solid #4a4a4a;
@@ -96,12 +97,20 @@ main {
     font-family: 'Rajdhani', sans-serif;
     background: #1a1a1a;
     color: #e0e0e0;
+    resize: vertical;
+}
+
+.form-group textarea {
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+    line-height: 1.5;
 }
 
 .form-group input[type="url"]:focus,
 .form-group input[type="number"]:focus,
 .form-group input[type="text"]:focus,
-.form-group select:focus {
+.form-group select:focus,
+.form-group textarea:focus {
     outline: none;
     border-color: #808080;
     box-shadow: 0 0 0 4px rgba(128, 128, 128, 0.2);
