@@ -12,15 +12,24 @@ This guide explains how to deploy the Producer Tools YouTube Audio Converter to 
    - Connect your GitHub repository
    - Name: `producer-tools-backend`
    - Environment: `Python 3`
-   - Build Command: `pip install -r backend/requirements.txt`
-   - Start Command: `cd backend && python app.py`
+   - **Root Directory**: Leave empty (uses repo root)
+   - **Build Command**: `pip install -r backend/requirements.txt`
+   - **Start Command**: `cd backend && python app.py`
+   - **Python Version**: 3.12.3 (or latest 3.12.x)
 
 3. **Add Environment Variables:**
-   - No special variables needed for basic setup
+   - `PORT`: 5000 (optional, Render sets this automatically)
+   - No other variables needed for basic setup
 
-4. **Add Buildpack:**
-   - Render will auto-detect Python, but you need ffmpeg
-   - Add a build script or use Docker (see Dockerfile)
+4. **Important - FFmpeg Installation:**
+   - Render doesn't install system packages by default
+   - **Option A**: Use the Dockerfile (recommended)
+     - Change service type to "Docker" instead of "Python"
+     - Render will use the Dockerfile automatically
+   - **Option B**: Add to build command:
+     - Build Command: `apt-get update && apt-get install -y ffmpeg && pip install -r backend/requirements.txt`
+     - Note: This may not work on all Render plans
+   - **Option C**: Use a custom Dockerfile (see Dockerfile in repo)
 
 ### Frontend Deployment
 
