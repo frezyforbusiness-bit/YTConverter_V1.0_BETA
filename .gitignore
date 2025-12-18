@@ -1,0 +1,60 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# File temporanei
+*.tmp
+*.temp
+temp/
+tmp/
+
+# File audio/video scaricati
+*.mp3
+*.wav
+*.flac
+*.ogg
+*.m4a
+*.opus
+*.mp4
+*.webm
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+

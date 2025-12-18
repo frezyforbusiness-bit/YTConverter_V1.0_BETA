@@ -228,7 +228,7 @@ class YouTubeAudioConverter:
             tuple: (bpm, scale) dove bpm è un int e scale è una stringa
         """
         try:
-            print(f"Analisi audio per rilevare BPM e scala...")
+            print(f"Analyzing audio for BPM and key detection...")
             
             # Carica l'audio (usa solo i primi 30 secondi per velocità)
             y, sr = librosa.load(audio_path, duration=30.0)
@@ -269,13 +269,13 @@ class YouTubeAudioConverter:
             
             scale = f"{main_note} {scale_type}"
             
-            print(f"BPM rilevato: {bpm}, Scala rilevata: {scale}")
+            print(f"BPM detected: {bpm}, Key detected: {scale}")
             
             return bpm, scale
         
         except Exception as e:
-            print(f"Errore durante l'analisi audio: {e}")
-            # In caso di errore, restituisce valori di default
+            print(f"Error during audio analysis: {e}")
+            # On error, return default values
             return None, None
     
     def sanitize_filename(self, filename):

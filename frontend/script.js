@@ -35,11 +35,11 @@ function updateProgress(percent, message) {
     progressMessage.textContent = message;
 }
 
-// Mostra messaggio di errore (informale)
+// Show error message (informal)
 function showError(message) {
-    // Aggiunge un prefisso informale se non c'è già un emoji
+    // Add informal prefix if there's no emoji already
     if (!message.match(/^[😬😅🤦🙄❌⚠️]/)) {
-        errorMessage.textContent = `😬 Ops! ${message}`;
+        errorMessage.textContent = `😬 Oops! ${message}`;
     } else {
         errorMessage.textContent = message;
     }
@@ -47,9 +47,9 @@ function showError(message) {
     successMessage.style.display = 'none';
 }
 
-// Mostra messaggio di successo (informale)
+// Show success message (informal)
 function showSuccess(message) {
-    // Aggiunge un prefisso informale se non c'è già un emoji
+    // Add informal prefix if there's no emoji already
     if (!message.match(/^[🎉✅👍✨]/)) {
         successMessage.textContent = `🎉 ${message}`;
     } else {
@@ -99,27 +99,27 @@ form.addEventListener('submit', async (e) => {
     const youtubeUrl = document.getElementById('youtubeUrl').value.trim();
     const audioFormat = document.getElementById('audioFormat').value;
     
-    // Validazione URL
+    // URL validation
     if (!youtubeUrl) {
-        showError('Dai, metti un link YouTube! 😅');
+        showError('Come on, paste a YouTube URL! 😅');
         return;
     }
     
     if (!isValidYouTubeUrl(youtubeUrl)) {
-        showError('Questo non sembra un link YouTube valido... 🤔');
+        showError('This doesn\'t look like a valid YouTube URL... 🤔');
         return;
     }
     
-    // Verifica se è una playlist (non supportata)
-    // Rifiuta URL esplicitamente di playlist, ma permette video singoli anche se hanno parametro list=
+    // Check if it's a playlist (not supported)
+    // Reject explicit playlist URLs, but allow single videos even if they have list= parameter
     if (youtubeUrl.includes('/playlist')) {
-        showError('Le playlist? Non ancora, scusa! Usa un video singolo 🙄');
+        showError('Playlists? Not yet, sorry! Use a single video 🙄');
         return;
     }
     
     setLoading(true);
     hideMessages();
-    showProgress(0, 'Ok, partiamo! 🚀');
+    showProgress(0, 'Let\'s go! 🚀');
     
     let pollInterval = null;
     
@@ -154,7 +154,7 @@ form.addEventListener('submit', async (e) => {
         const taskId = data.task_id;
         
         if (!taskId) {
-            showError('Qualcosa è andato storto, riprova! 🤦');
+            showError('Something went wrong, try again! 🤦');
             setLoading(false);
             hideProgress();
             return;
@@ -167,7 +167,7 @@ form.addEventListener('submit', async (e) => {
                 
                 if (!statusResponse.ok) {
                     clearInterval(pollInterval);
-                    showError('Ops, problema di comunicazione con il server 😬');
+                    showError('Oops, server communication issue 😬');
                     setLoading(false);
                     hideProgress();
                     return;
@@ -186,7 +186,7 @@ form.addEventListener('submit', async (e) => {
                         const downloadResponse = await fetch(`${API_URL}/download/${taskId}`);
                         
                         if (!downloadResponse.ok) {
-                            throw new Error('Problema nel download, riprova!');
+                            throw new Error('Download issue, try again!');
                         }
                         
                         const blob = await downloadResponse.blob();
@@ -194,7 +194,7 @@ form.addEventListener('submit', async (e) => {
                         
                         downloadFile(blob, filename);
                         
-                        showSuccess(`Fatto! Il tuo file ${audioFormat.toUpperCase()} è pronto! 🎵`);
+                        showSuccess(`Done! Your ${audioFormat.toUpperCase()} file is ready! 🎵`);
                         setLoading(false);
                         
                         // Reset form dopo 3 secondi
@@ -205,24 +205,24 @@ form.addEventListener('submit', async (e) => {
                         }, 3000);
                         
                     } catch (error) {
-                        console.error('Errore nel download:', error);
-                        showError(`Download fallito: ${error.message} 😅`);
+                        console.error('Download error:', error);
+                        showError(`Download failed: ${error.message} 😅`);
                         setLoading(false);
                         hideProgress();
                     }
                     
                 } else if (status.status === 'error') {
                     clearInterval(pollInterval);
-                    const errorMsg = status.error || 'Qualcosa è andato storto durante la conversione';
-                    showError(errorMsg.includes('playlist') ? 'Niente playlist, solo video singoli! 🙄' : `😬 ${errorMsg}`);
+                    const errorMsg = status.error || 'Something went wrong during conversion';
+                    showError(errorMsg.includes('playlist') ? 'No playlists, single videos only! 🙄' : `😬 ${errorMsg}`);
                     setLoading(false);
                     hideProgress();
                 }
                 
             } catch (error) {
-                console.error('Errore nel polling:', error);
+                console.error('Polling error:', error);
                 clearInterval(pollInterval);
-                showError('Il server non risponde, controlla che sia avviato! 🤷');
+                showError('Server not responding, make sure it\'s running! 🤷');
                 setLoading(false);
                 hideProgress();
             }
@@ -236,9 +236,9 @@ form.addEventListener('submit', async (e) => {
         }
         
         if (error.name === 'TypeError' && error.message.includes('fetch')) {
-            showError('Il server non risponde! Assicurati che sia avviato su http://localhost:5000 🔌');
+            showError('Server not responding! Make sure it\'s running on http://localhost:5000 🔌');
         } else {
-            showError(`Ops! ${error.message} 😅`);
+            showError(`Oops! ${error.message} 😅`);
         }
         
         setLoading(false);
@@ -246,20 +246,20 @@ form.addEventListener('submit', async (e) => {
     }
 });
 
-// Verifica lo stato del server all'avvio (silenzioso, senza mostrare errori)
+// Check server status on startup (silent, no error display)
 async function checkServerStatus() {
     try {
         const response = await fetch(`${API_URL}/health`);
         if (response.ok) {
-            console.log('✅ Server connesso');
+            console.log('✅ Server connected');
         }
     } catch (error) {
-        console.warn('⚠️ Server non raggiungibile:', error);
-        // Non mostriamo errore all'avvio, solo in console
+        console.warn('⚠️ Server unreachable:', error);
+        // Don't show error on startup, only in console
     }
 }
 
-// Controlla lo stato del server quando la pagina carica
+// Check server status when page loads
 window.addEventListener('load', () => {
     checkServerStatus();
 });

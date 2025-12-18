@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>YouTube Audio Converter</title>
+    <title>Producer Tools - YouTube to Audio Converter</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&family=Exo+2:wght@400;600;700&display=swap" rel="stylesheet">
@@ -12,15 +12,15 @@
 <body>
     <div class="container">
         <header>
-            <h1>🎵 YouTube to Audio</h1>
-            <p class="subtitle">Trasforma i tuoi video in musica, tipo magia ✨</p>
+            <h1>🎵 Producer Tools</h1>
+            <p class="subtitle">Convert YouTube videos to audio with automatic BPM & key detection</p>
         </header>
 
         <main>
             <div class="converter-card">
                 <form id="converterForm">
                     <div class="form-group">
-                        <label for="youtubeUrl">Link YouTube</label>
+                        <label for="youtubeUrl">YouTube URL</label>
                         <input 
                             type="url" 
                             id="youtubeUrl" 
@@ -29,16 +29,16 @@
                             required
                         >
                         <small class="info-hint">
-                            💡 Solo video singoli, niente playlist (scusa ma è così 🤷)
+                            💡 Single videos only (no playlists, sorry! 🤷)
                         </small>
                     </div>
 
                     <div class="form-group">
-                        <label for="audioFormat">Formato Audio</label>
+                        <label for="audioFormat">Audio Format</label>
                         <select id="audioFormat" name="audioFormat" required>
                             <option value="mp3">MP3</option>
-                            <option value="wav">WAV</option>
-                            <option value="flac">FLAC</option>
+                            <option value="wav">WAV (Recommended for Production)</option>
+                            <option value="flac">FLAC (Lossless)</option>
                             <option value="ogg">OGG</option>
                             <option value="m4a">M4A/AAC</option>
                             <option value="opus">Opus</option>
@@ -47,15 +47,15 @@
 
                     <div class="auto-detect-box">
                         <small>
-                            🤖 BPM e scala? Li trovo io automaticamente, tranquillo!
+                            🎹 Automatic BPM & Key Detection - Perfect for music producers! Files will be named: TrackName-BPM-Key.ext
                         </small>
                     </div>
 
                     <button type="submit" id="convertBtn" class="btn-primary">
-                        <span class="btn-text">🚀 Vai, converti!</span>
+                        <span class="btn-text">🚀 Convert & Analyze</span>
                         <span class="btn-loader" style="display: none;">
                             <span class="spinner"></span>
-                            Aspetta un attimo...
+                            Processing...
                         </span>
                     </button>
                 </form>
@@ -76,27 +76,35 @@
             </div>
 
             <div class="info-section">
-                <h2>Come funziona? Facile!</h2>
+                <h2>Built for Music Producers</h2>
                 <ol class="steps-list">
-                    <li>Incolla il link YouTube qui sopra 👆</li>
-                    <li>Scegli il formato che ti piace di più</li>
-                    <li>Premi il bottone e rilassati, faccio tutto io 😎</li>
+                    <li>Paste a YouTube URL above 👆</li>
+                    <li>Choose your preferred audio format</li>
+                    <li>Click convert - we'll detect BPM & key automatically! 🎵</li>
                 </ol>
 
-                <h3>Formati disponibili</h3>
+                <h3>Professional Audio Formats</h3>
                 <ul class="formats-list">
-                    <li><strong>MP3</strong> - Il classico, funziona ovunque</li>
-                    <li><strong>WAV</strong> - Qualità top, file più grandi</li>
-                    <li><strong>FLAC</strong> - Per i puristi del suono</li>
-                    <li><strong>OGG</strong> - Open source e figo</li>
-                    <li><strong>M4A/AAC</strong> - Per i fan Apple</li>
-                    <li><strong>Opus</strong> - Il futuro, già qui</li>
+                    <li><strong>MP3</strong> - Universal compatibility, good for sharing</li>
+                    <li><strong>WAV</strong> - Uncompressed, studio quality (Best for production)</li>
+                    <li><strong>FLAC</strong> - Lossless compression, perfect quality</li>
+                    <li><strong>OGG</strong> - Open source, efficient compression</li>
+                    <li><strong>M4A/AAC</strong> - Apple standard, great quality</li>
+                    <li><strong>Opus</strong> - Modern format, excellent compression</li>
+                </ul>
+
+                <h3>Features</h3>
+                <ul class="formats-list">
+                    <li><strong>Automatic BPM Detection</strong> - Get the tempo instantly</li>
+                    <li><strong>Key Detection</strong> - Know the musical key (Major/Minor)</li>
+                    <li><strong>Smart Naming</strong> - Files auto-named: TrackName-BPM-Key.ext</li>
+                    <li><strong>High Quality</strong> - Professional audio conversion</li>
                 </ul>
             </div>
         </main>
 
         <footer>
-            <p>Fatto con ❤️ per chi ama la musica</p>
+            <p>Made for music producers ❤️</p>
         </footer>
     </div>
 

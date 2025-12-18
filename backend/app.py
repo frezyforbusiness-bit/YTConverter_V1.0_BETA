@@ -31,7 +31,7 @@ def convert_task(task_id, youtube_url, audio_format):
         conversion_status[task_id] = {
             'status': 'downloading',
             'progress': 10,
-            'message': 'Inizio download...',
+            'message': 'Starting download...',
             'file': None,
             'error': None
         }
@@ -39,39 +39,39 @@ def convert_task(task_id, youtube_url, audio_format):
         # Download video
         conversion_status[task_id].update({
             'progress': 20,
-            'message': 'Download video in corso...'
+            'message': 'Downloading video...'
         })
         video_path, video_info = converter.download_video(youtube_url)
         
         conversion_status[task_id].update({
             'progress': 40,
-            'message': 'Download completato'
+            'message': 'Download completed'
         })
-        time.sleep(0.5)  # Piccola pausa per mostrare il messaggio
+        time.sleep(0.5)  # Small pause to show message
         
-        # Conversione in audio
+        # Convert to audio
         conversion_status[task_id].update({
             'progress': 50,
-            'message': 'Conversione in formato ' + audio_format + '...'
+            'message': 'Converting to ' + audio_format.upper() + '...'
         })
         temp_audio_path = converter.convert_to_audio(video_path, audio_format)
         
         conversion_status[task_id].update({
             'progress': 60,
-            'message': 'Conversione completata'
+            'message': 'Conversion completed'
         })
         time.sleep(0.5)
         
-        # Analisi audio
+        # Audio analysis
         conversion_status[task_id].update({
             'progress': 70,
-            'message': 'Analizzo traccia: BPM e key...'
+            'message': 'Analyzing track: BPM & key detection...'
         })
         bpm, scale = converter.analyze_audio(temp_audio_path)
         
         conversion_status[task_id].update({
             'progress': 85,
-            'message': 'Analisi completata'
+            'message': 'Analysis completed'
         })
         time.sleep(0.5)
         
@@ -95,18 +95,18 @@ def convert_task(task_id, youtube_url, audio_format):
         conversion_status[task_id].update({
             'status': 'completed',
             'progress': 100,
-            'message': 'Pronto per il download',
+            'message': 'Ready for download',
             'file': final_output_path
         })
     
     except Exception as e:
         error_msg = str(e)
-        print(f"Errore durante la conversione: {error_msg}")
+        print(f"Error during conversion: {error_msg}")
         print(traceback.format_exc())
         conversion_status[task_id] = {
             'status': 'error',
             'progress': 0,
-            'message': 'Errore durante la conversione',
+            'message': 'Error during conversion',
             'error': error_msg,
             'file': None
         }
