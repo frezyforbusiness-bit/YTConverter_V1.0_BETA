@@ -41,7 +41,7 @@ def index():
     })
 
 
-def convert_task(task_id, youtube_url, audio_format, cookies_content=None):
+def convert_task(task_id, youtube_url, audio_format, cookies_content=None, browser_name=None):
     """Esegue la conversione in un thread separato"""
     try:
         conversion_status[task_id] = {
@@ -57,7 +57,7 @@ def convert_task(task_id, youtube_url, audio_format, cookies_content=None):
             'progress': 20,
             'message': 'Downloading video...'
         })
-        video_path, video_info = converter.download_video(youtube_url, cookies_content=cookies_content)
+        video_path, video_info = converter.download_video(youtube_url, cookies_content=cookies_content, browser_name=browser_name)
         
         conversion_status[task_id].update({
             'progress': 40,
