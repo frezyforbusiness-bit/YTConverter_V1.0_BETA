@@ -128,18 +128,19 @@ class YouTubeAudioConverter:
         video_path = None
         last_error = None
         
-        # Prova con diversi client se il primo fallisce
-        # Ordine: iOS (meno bloccato), poi Android, poi web variants
-        clients_to_try = [
-            {'player_client': ['ios']},
-            {'player_client': ['android']},
-            {'player_client': ['android_embedded']},
-            {'player_client': ['web']},
-            {'player_client': ['mweb']},
-            {'player_client': ['tv_embedded']},
-        ]
-        
-        for client_config in clients_to_try:
+        try:
+            # Prova con diversi client se il primo fallisce
+            # Ordine: iOS (meno bloccato), poi Android, poi web variants
+            clients_to_try = [
+                {'player_client': ['ios']},
+                {'player_client': ['android']},
+                {'player_client': ['android_embedded']},
+                {'player_client': ['web']},
+                {'player_client': ['mweb']},
+                {'player_client': ['tv_embedded']},
+            ]
+            
+            for client_config in clients_to_try:
             try:
                 # Aggiorna la configurazione con il client corrente
                 current_opts = ydl_opts.copy()
@@ -220,15 +221,15 @@ class YouTubeAudioConverter:
                     print(f"Other error, trying next client...")
                     continue
         
-        # Se arriviamo qui, tutti i client hanno fallito
-        if last_error:
-            error_msg = str(last_error)
-            if 'bot' in error_msg.lower() or 'sign in' in error_msg.lower():
-                raise Exception("YouTube is blocking the request. This video may require authentication or the service is temporarily unavailable. Please try again later or use a different video.")
+            # Se arriviamo qui, tutti i client hanno fallito
+            if last_error:
+                error_msg = str(last_error)
+                if 'bot' in error_msg.lower() or 'sign in' in error_msg.lower():
+                    raise Exception("YouTube is blocking the request. This video may require authentication or the service is temporarily unavailable. Please try again later or use a different video.")
+                else:
+                    raise Exception(f"Error during download after trying all clients: {error_msg}")
             else:
-                raise Exception(f"Error during download after trying all clients: {error_msg}")
-        else:
-            raise Exception("Failed to download video: Unknown error")
+                raise Exception("Failed to download video: Unknown error")
         
         finally:
             # Clean up cookies file if it was created

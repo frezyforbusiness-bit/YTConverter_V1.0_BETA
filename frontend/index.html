@@ -10,6 +10,58 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <!-- Cookies Banner -->
+    <div id="cookiesBanner" class="cookies-banner" style="display: none;">
+        <div class="cookies-banner-content">
+            <div class="cookies-banner-text">
+                <strong>🍪 We use cookies</strong>
+                <p>This website uses cookies to enhance your experience and enable YouTube video conversion. By continuing, you agree to our use of cookies.</p>
+            </div>
+            <div class="cookies-banner-buttons">
+                <button id="acceptCookies" class="btn-accept-cookies">Accept</button>
+                <button id="declineCookies" class="btn-decline-cookies">Decline</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cookies Setup Modal -->
+    <div id="cookiesModal" class="cookies-modal" style="display: none;">
+        <div class="cookies-modal-content">
+            <div class="cookies-modal-header">
+                <h2>🍪 Setup YouTube Cookies</h2>
+                <button id="closeCookiesModal" class="close-modal-btn">&times;</button>
+            </div>
+            <div class="cookies-modal-body">
+                <p>To convert YouTube videos, we need your YouTube cookies. Please follow these steps:</p>
+                <ol class="cookies-steps">
+                    <li>Install a browser extension:
+                        <ul>
+                            <li><strong>Chrome:</strong> <a href="https://chrome.google.com/webstore/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc" target="_blank">Get cookies.txt LOCALLY</a></li>
+                            <li><strong>Firefox:</strong> <a href="https://addons.mozilla.org/en-US/firefox/addon/cookies-txt/" target="_blank">cookies.txt</a></li>
+                        </ul>
+                    </li>
+                    <li>Go to <a href="https://www.youtube.com" target="_blank">YouTube.com</a> and make sure you're logged in</li>
+                    <li>Click the extension icon and export cookies for YouTube</li>
+                    <li>Paste the cookies content below:</li>
+                </ol>
+                <div class="form-group">
+                    <label for="cookiesInput">Cookies Content (Netscape format)</label>
+                    <textarea 
+                        id="cookiesInput" 
+                        name="cookiesInput" 
+                        rows="8"
+                        placeholder="Paste your cookies.txt content here..."
+                        class="cookies-textarea"
+                    ></textarea>
+                </div>
+                <div class="cookies-modal-buttons">
+                    <button id="saveCookies" class="btn-save-cookies">Save Cookies</button>
+                    <button id="skipCookies" class="btn-skip-cookies">Skip (Try without cookies)</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="container">
         <header>
             <h1>🎵 Producer Tools</h1>
