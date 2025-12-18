@@ -141,7 +141,7 @@ class YouTubeAudioConverter:
             ]
             
             for client_config in clients_to_try:
-            try:
+                try:
                 # Aggiorna la configurazione con il client corrente
                 current_opts = ydl_opts.copy()
                 current_opts['extractor_args'] = {
