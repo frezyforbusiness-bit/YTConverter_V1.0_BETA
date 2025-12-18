@@ -128,65 +128,65 @@ class YouTubeAudioConverter:
         ]
         
         for client_config in clients_to_try:
-                try:
-                    # Aggiorna la configurazione con il client corrente
-                    current_opts = ydl_opts.copy()
-                    current_opts['extractor_args'] = {
-                        'youtube': {
-                            **ydl_opts['extractor_args']['youtube'],
-                            **client_config
-                        }
+            try:
+                # Aggiorna la configurazione con il client corrente
+                current_opts = ydl_opts.copy()
+                current_opts['extractor_args'] = {
+                    'youtube': {
+                        **ydl_opts['extractor_args']['youtube'],
+                        **client_config
                     }
-                    
-                    with yt_dlp.YoutubeDL(current_opts) as ydl:
-                        # Prima estrae solo le info per verificare se è una playlist
-                        info = ydl.extract_info(youtube_url, download=False)
-                    
-                    # Verifica se è una playlist
-                    if info.get('_type') == 'playlist':
+                }
+                
+                with yt_dlp.YoutubeDL(current_opts) as ydl:
+                    # Prima estrae solo le info per verificare se è una playlist
+                    info = ydl.extract_info(youtube_url, download=False)
+                
+                # Verifica se è una playlist
+                if info.get('_type') == 'playlist':
+                    raise ValueError("Playlists are not supported. Use a single video URL.")
+                
+                # Verifica se ha entries (playlist)
+                if 'entries' in info and info['entries']:
+                    entries = list(info['entries'])
+                    if len(entries) > 1:
                         raise ValueError("Playlists are not supported. Use a single video URL.")
-                    
-                    # Verifica se ha entries (playlist)
-                    if 'entries' in info and info['entries']:
-                        entries = list(info['entries'])
-                        if len(entries) > 1:
-                            raise ValueError("Playlists are not supported. Use a single video URL.")
-                        # Se ha una sola entry, usa quella
-                        if len(entries) == 1:
-                            info = entries[0]
-                    
-                    # Verifica che sia un video valido
-                    if not info.get('id'):
-                        raise ValueError("Unable to extract video information. Check that the URL is correct.")
-                    
-                    # Se serve solo le info, restituisci
-                    if get_info_only:
-                        return None, info
-                    
-                    # Ora scarica il video (solo se non è una playlist)
-                    if info.get('_type') != 'playlist':
-                        info = ydl.extract_info(youtube_url, download=True)
-                        video_path = ydl.prepare_filename(info)
-                    else:
-                        raise ValueError("Playlists are not supported. Use a single video URL.")
-                    
-                    # Se il file scaricato ha un'estensione diversa, cerca il file effettivo
-                    if not os.path.exists(video_path):
-                        # Cerca il file con estensione corretta
-                        base_name = os.path.splitext(video_path)[0]
-                        for ext in ['.webm', '.m4a', '.mp4', '.opus', '.ogg']:
-                            potential_path = base_name + ext
-                            if os.path.exists(potential_path):
-                                video_path = potential_path
-                                break
-                    
-                    if not os.path.exists(video_path):
-                        raise FileNotFoundError("Video file not found after download")
-                    
-                    # Successo! Restituisci il risultato
-                    print(f"Successfully downloaded using client: {client_config}")
-                    return video_path, info
-                    
+                    # Se ha una sola entry, usa quella
+                    if len(entries) == 1:
+                        info = entries[0]
+                
+                # Verifica che sia un video valido
+                if not info.get('id'):
+                    raise ValueError("Unable to extract video information. Check that the URL is correct.")
+                
+                # Se serve solo le info, restituisci
+                if get_info_only:
+                    return None, info
+                
+                # Ora scarica il video (solo se non è una playlist)
+                if info.get('_type') != 'playlist':
+                    info = ydl.extract_info(youtube_url, download=True)
+                    video_path = ydl.prepare_filename(info)
+                else:
+                    raise ValueError("Playlists are not supported. Use a single video URL.")
+                
+                # Se il file scaricato ha un'estensione diversa, cerca il file effettivo
+                if not os.path.exists(video_path):
+                    # Cerca il file con estensione corretta
+                    base_name = os.path.splitext(video_path)[0]
+                    for ext in ['.webm', '.m4a', '.mp4', '.opus', '.ogg']:
+                        potential_path = base_name + ext
+                        if os.path.exists(potential_path):
+                            video_path = potential_path
+                            break
+                
+                if not os.path.exists(video_path):
+                    raise FileNotFoundError("Video file not found after download")
+                
+                # Successo! Restituisci il risultato
+                print(f"Successfully downloaded using client: {client_config}")
+                return video_path, info
+                
             except Exception as e:
                 error_msg = str(e)
                 last_error = e
