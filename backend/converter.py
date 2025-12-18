@@ -142,81 +142,81 @@ class YouTubeAudioConverter:
         
         # Try each player client in order
         for client_list in player_clients:
-                try:
-                    # Build options for this client
-                    current_opts = base_opts.copy()
-                    current_opts['extractor_args'] = {
-                        'youtube': {
-                            'player_client': client_list,
-                            'player_skip': ['webpage', 'configs'],  # Skip unnecessary data
-                        }
+            try:
+                # Build options for this client
+                current_opts = base_opts.copy()
+                current_opts['extractor_args'] = {
+                    'youtube': {
+                        'player_client': client_list,
+                        'player_skip': ['webpage', 'configs'],  # Skip unnecessary data
                     }
-                    
-                    # Small delay between retries to avoid rate limiting
-                    if last_error:
-                        import time
-                        time.sleep(1.0)  # Increased delay to avoid rate limiting
-                    
-                    print(f"Trying player client: {client_list[0]}")
-                    
-                    # Extract info first (validates URL and checks for playlists)
-                    with yt_dlp.YoutubeDL(current_opts) as ydl:
-                        info = ydl.extract_info(youtube_url, download=False)
-                    
-                    # Validate: reject playlists
-                    if info.get('_type') == 'playlist':
+                }
+                
+                # Small delay between retries to avoid rate limiting
+                if last_error:
+                    import time
+                    time.sleep(1.0)  # Increased delay to avoid rate limiting
+                
+                print(f"Trying player client: {client_list[0]}")
+                
+                # Extract info first (validates URL and checks for playlists)
+                with yt_dlp.YoutubeDL(current_opts) as ydl:
+                    info = ydl.extract_info(youtube_url, download=False)
+                
+                # Validate: reject playlists
+                if info.get('_type') == 'playlist':
+                    raise ValueError("Playlists are not supported. Use a single video URL.")
+                
+                # Handle single-entry playlists (YouTube sometimes returns this)
+                if 'entries' in info and info['entries']:
+                    entries = list(info['entries'])
+                    if len(entries) > 1:
                         raise ValueError("Playlists are not supported. Use a single video URL.")
-                    
-                    # Handle single-entry playlists (YouTube sometimes returns this)
-                    if 'entries' in info and info['entries']:
-                        entries = list(info['entries'])
-                        if len(entries) > 1:
-                            raise ValueError("Playlists are not supported. Use a single video URL.")
-                        if len(entries) == 1:
-                            info = entries[0]
-                    
-                    # Validate video ID
-                    if not info.get('id'):
-                        raise ValueError("Unable to extract video information. Check that the URL is correct.")
-                    
-                    # If only info is needed, return now
-                    if get_info_only:
-                        return None, info
-                    
-                    # Download the video
-                    with yt_dlp.YoutubeDL(current_opts) as ydl:
-                        info = ydl.extract_info(youtube_url, download=True)
-                        video_path = ydl.prepare_filename(info)
-                    
-                    # Handle different file extensions (yt-dlp may download with different extension)
-                    if not os.path.exists(video_path):
-                        base_name = os.path.splitext(video_path)[0]
-                        for ext in ['.webm', '.m4a', '.mp4', '.opus', '.ogg']:
-                            potential_path = base_name + ext
-                            if os.path.exists(potential_path):
-                                video_path = potential_path
-                                break
-                    
-                    # Final validation
-                    if not os.path.exists(video_path):
-                        raise FileNotFoundError("Video file not found after download")
-                    
-                    # Success!
-                    print(f"Successfully downloaded using client: {client_list[0]}")
-                    return video_path, info
-                    
-                except Exception as e:
-                    error_msg = str(e)
-                    last_error = e
-                    last_client = client_list[0]
-                    print(f"Client {client_list[0]} failed: {error_msg[:100]}...")
-                    
-                    # Don't retry on playlist errors (user error)
-                    if 'playlist' in error_msg.lower():
-                        raise ValueError("Playlists are not supported. Use a single video URL.")
-                    
-                    # Continue to next client for other errors
-                    continue
+                    if len(entries) == 1:
+                        info = entries[0]
+                
+                # Validate video ID
+                if not info.get('id'):
+                    raise ValueError("Unable to extract video information. Check that the URL is correct.")
+                
+                # If only info is needed, return now
+                if get_info_only:
+                    return None, info
+                
+                # Download the video
+                with yt_dlp.YoutubeDL(current_opts) as ydl:
+                    info = ydl.extract_info(youtube_url, download=True)
+                    video_path = ydl.prepare_filename(info)
+                
+                # Handle different file extensions (yt-dlp may download with different extension)
+                if not os.path.exists(video_path):
+                    base_name = os.path.splitext(video_path)[0]
+                    for ext in ['.webm', '.m4a', '.mp4', '.opus', '.ogg']:
+                        potential_path = base_name + ext
+                        if os.path.exists(potential_path):
+                            video_path = potential_path
+                            break
+                
+                # Final validation
+                if not os.path.exists(video_path):
+                    raise FileNotFoundError("Video file not found after download")
+                
+                # Success!
+                print(f"Successfully downloaded using client: {client_list[0]}")
+                return video_path, info
+                
+            except Exception as e:
+                error_msg = str(e)
+                last_error = e
+                last_client = client_list[0]
+                print(f"Client {client_list[0]} failed: {error_msg[:100]}...")
+                
+                # Don't retry on playlist errors (user error)
+                if 'playlist' in error_msg.lower():
+                    raise ValueError("Playlists are not supported. Use a single video URL.")
+                
+                # Continue to next client for other errors
+                continue
         
         # All clients failed - provide clear error message
         if last_error:
