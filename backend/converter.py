@@ -55,15 +55,15 @@ class YouTubeAudioConverter:
         
         return True
     
-    def download_video(self, youtube_url, get_info_only=False, cookies_content=None, browser_name=None):
+    def download_video(self, youtube_url, get_info_only=False, browser_name=None):
         """
         Scarica il video YouTube come file temporaneo o estrae solo le informazioni
+        Cookies vengono estratti automaticamente dal browser specificato
         
         Args:
             youtube_url: URL del video YouTube
             get_info_only: Se True, estrae solo le info senza scaricare
-            cookies_content: Optional cookies.txt content as string (Netscape format)
-            browser_name: Optional browser name to extract cookies from ('firefox', 'chrome', 'chromium', 'edge', 'opera', 'brave', 'vivaldi')
+            browser_name: Browser name to extract cookies from ('firefox', 'chrome', 'chromium', 'edge', 'opera', 'brave', 'vivaldi')
         
         Returns:
             tuple: (video_path, video_info) se get_info_only=False
@@ -71,18 +71,6 @@ class YouTubeAudioConverter:
         """
         if not self.validate_youtube_url(youtube_url):
             raise ValueError("Invalid YouTube URL")
-        
-        # Create temporary cookies file if cookies_content is provided
-        cookies_file = None
-        if cookies_content:
-            try:
-                cookies_file = os.path.join(self.temp_dir, f'cookies_{uuid.uuid4().hex}.txt')
-                with open(cookies_file, 'w', encoding='utf-8') as f:
-                    f.write(cookies_content)
-                print(f"Created temporary cookies file: {cookies_file}")
-            except Exception as e:
-                print(f"Warning: Could not create cookies file: {e}")
-                cookies_file = None
         
         # Configurazione yt-dlp ottimizzata per evitare blocchi
         # Prova diversi client in ordine di priorità
@@ -130,13 +118,9 @@ class YouTubeAudioConverter:
             'socket_timeout': 30,
         }
         
-        # Add cookies file if provided (priority)
+        # Extract cookies automatically from browser (REQUIRED)
         # IMPORTANTE: I cookies sono ESSENZIALI per evitare blocchi di YouTube
-        if cookies_file and os.path.exists(cookies_file):
-            ydl_opts['cookiefile'] = cookies_file
-            print("Using cookies file for authentication")
-        # Or try to extract cookies from browser if browser_name is provided
-        elif browser_name:
+        if browser_name:
             try:
                 # Supported browsers: firefox, chrome, chromium, edge, opera, brave, vivaldi
                 valid_browsers = ['firefox', 'chrome', 'chromium', 'edge', 'opera', 'brave', 'vivaldi']
@@ -251,12 +235,12 @@ class YouTubeAudioConverter:
                           'failed to extract' in error_msg.lower() or 
                           'failed to parse json' in error_msg.lower()):
                         print(f"Player response/JSON parsing error, trying next client configuration...")
-                        # Se NON abbiamo cookies, questo è probabilmente il problema principale
-                        if not cookies_file and not browser_name:
-                            print(f"WARNING: No cookies configured! YouTube is likely blocking the request. Cookies are REQUIRED for most videos.")
-                        elif cookies_file or browser_name:
-                            print(f"Note: Cookies are configured but extraction still failing. This might indicate YouTube restrictions or invalid cookies.")
-                            continue
+                        # Se NON abbiamo browser configurato, questo è probabilmente il problema principale
+                        if not browser_name:
+                            print(f"WARNING: No browser configured for cookie extraction! YouTube is likely blocking the request.")
+                        else:
+                            print(f"Note: Browser cookie extraction is configured but still failing. The browser might not be installed on the server or cookies might not be accessible.")
+                        continue
                     # Se è un errore di playlist, rilanciamo subito
                     elif 'playlist' in error_msg.lower():
                         raise ValueError("Playlists are not supported. Use a single video URL.")
