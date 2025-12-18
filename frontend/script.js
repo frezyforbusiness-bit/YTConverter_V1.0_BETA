@@ -137,16 +137,12 @@ form.addEventListener('submit', async (e) => {
     
     try {
         // Invia richiesta al backend per avviare la conversione
-               // Prepare request body
+               // Prepare request body (cookies are required)
                const requestBody = {
                    url: youtubeUrl,
-                   format: audioFormat
+                   format: audioFormat,
+                   cookies: cookies  // Always include cookies (required)
                };
-               
-               // Add cookies if provided
-               if (cookies) {
-                   requestBody.cookies = cookies;
-               }
                
                const response = await fetch(`${API_URL}/convert`, {
                    method: 'POST',

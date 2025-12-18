@@ -146,7 +146,7 @@ def convert():
         
         youtube_url = data.get('url')
         audio_format = data.get('format', 'mp3')
-        cookies_content = data.get('cookies')  # Optional cookies content
+        cookies_content = data.get('cookies')  # Required cookies content
         
         print(f"YouTube URL: {youtube_url}")
         print(f"Audio format: {audio_format}")
@@ -155,6 +155,16 @@ def convert():
         if not youtube_url:
             print("ERROR: YouTube URL missing")
             return jsonify({"error": "YouTube URL missing"}), 400
+        
+        # Cookies are required
+        if not cookies_content:
+            print("ERROR: Cookies missing")
+            return jsonify({"error": "Cookies are required. Please provide your cookies.txt content."}), 400
+        
+        # Basic validation: cookies should contain YouTube domain
+        if 'youtube.com' not in cookies_content.lower():
+            print("ERROR: Invalid cookies format")
+            return jsonify({"error": "Invalid cookies format. Please make sure you exported cookies for YouTube."}), 400
         
         # Format validation
         valid_formats = ['mp3', 'wav', 'flac', 'ogg', 'm4a', 'opus']
