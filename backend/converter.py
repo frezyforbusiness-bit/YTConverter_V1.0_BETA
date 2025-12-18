@@ -111,6 +111,7 @@ class YouTubeAudioConverter:
                     'player_client': ['ios', 'android', 'web'],
                     'player_skip': ['webpage', 'configs'],
                     'skip': ['dash', 'hls'],  # Skip problematic streaming formats
+                    'player_js_version': 'actual',  # Use actual player JS version (helps with signature extraction)
                 }
             },
             # Additional options to help with extraction
