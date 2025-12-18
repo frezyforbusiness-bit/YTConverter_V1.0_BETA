@@ -140,12 +140,17 @@ form.addEventListener('submit', async (e) => {
         });
         
         if (!response.ok) {
-            let errorMsg = 'Errore durante la conversione';
+            let errorMsg = 'Error during conversion';
             try {
-                const errorData = await response.json();
-                errorMsg = errorData.error || errorMsg;
+                const responseText = await response.text();
+                if (responseText) {
+                    const errorData = JSON.parse(responseText);
+                    errorMsg = errorData.error || errorMsg;
+                } else {
+                    errorMsg = `Error ${response.status}: ${response.statusText}`;
+                }
             } catch (e) {
-                errorMsg = `Errore ${response.status}: ${response.statusText}`;
+                errorMsg = `Error ${response.status}: ${response.statusText}`;
             }
             showError(errorMsg);
             setLoading(false);
@@ -153,7 +158,24 @@ form.addEventListener('submit', async (e) => {
             return;
         }
         
-        const data = await response.json();
+        // Get response text first, then parse JSON
+        const responseText = await response.text();
+        if (!responseText) {
+            showError('Empty response from server');
+            setLoading(false);
+            hideProgress();
+            return;
+        }
+        
+        let data;
+        try {
+            data = JSON.parse(responseText);
+        } catch (e) {
+            showError(`Invalid response from server: ${e.message}`);
+            setLoading(false);
+            hideProgress();
+            return;
+        }
         const taskId = data.task_id;
         
         if (!taskId) {

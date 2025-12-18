@@ -9,7 +9,7 @@ import uuid
 import time
 
 app = Flask(__name__)
-CORS(app)  # Permette richieste cross-origin dal frontend
+CORS(app)  # Allow cross-origin requests from frontend
 
 # Directory per file temporanei
 TEMP_DIR = tempfile.gettempdir()
@@ -21,8 +21,8 @@ conversion_status = {}
 
 @app.route('/')
 def index():
-    """Redirect alla pagina principale"""
-    return jsonify({"message": "YouTube Audio Converter API"})
+    """API root endpoint"""
+    return jsonify({"message": "Producer Tools - YouTube Audio Converter API"})
 
 
 def convert_task(task_id, youtube_url, audio_format):
@@ -119,18 +119,18 @@ def convert():
         data = request.get_json()
         
         if not data:
-            return jsonify({"error": "Nessun dato fornito"}), 400
+            return jsonify({"error": "No data provided"}), 400
         
         youtube_url = data.get('url')
         audio_format = data.get('format', 'mp3')
         
         if not youtube_url:
-            return jsonify({"error": "URL YouTube mancante"}), 400
+            return jsonify({"error": "YouTube URL missing"}), 400
         
-        # Validazione formato
+        # Format validation
         valid_formats = ['mp3', 'wav', 'flac', 'ogg', 'm4a', 'opus']
         if audio_format not in valid_formats:
-            return jsonify({"error": f"Formato non supportato. Formati validi: {', '.join(valid_formats)}"}), 400
+            return jsonify({"error": f"Unsupported format. Valid formats: {', '.join(valid_formats)}"}), 400
         
         # Genera un task_id univoco
         task_id = str(uuid.uuid4())
@@ -144,9 +144,9 @@ def convert():
     
     except Exception as e:
         error_msg = str(e)
-        print(f"Errore: {error_msg}")
+        print(f"Error: {error_msg}")
         print(traceback.format_exc())
-        return jsonify({"error": f"Errore: {error_msg}"}), 500
+        return jsonify({"error": f"Error: {error_msg}"}), 500
 
 
 @app.route('/status/<task_id>', methods=['GET'])
@@ -161,18 +161,18 @@ def get_status(task_id):
 
 @app.route('/download/<task_id>', methods=['GET'])
 def download_file(task_id):
-    """Endpoint per scaricare il file convertito"""
+    """Endpoint to download converted file"""
     if task_id not in conversion_status:
-        return jsonify({"error": "Task non trovato"}), 404
+        return jsonify({"error": "Task not found"}), 404
     
     status = conversion_status[task_id]
     
     if status['status'] != 'completed' or not status.get('file'):
-        return jsonify({"error": "File non ancora pronto"}), 400
+        return jsonify({"error": "File not ready yet"}), 400
     
     file_path = status['file']
     if not os.path.exists(file_path):
-        return jsonify({"error": "File non trovato"}), 404
+        return jsonify({"error": "File not found"}), 404
     
     return send_file(
         file_path,
