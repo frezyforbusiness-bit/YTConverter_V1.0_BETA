@@ -151,9 +151,9 @@ def convert():
 
 @app.route('/status/<task_id>', methods=['GET'])
 def get_status(task_id):
-    """Endpoint per ottenere lo stato della conversione"""
+    """Endpoint to get conversion status"""
     if task_id not in conversion_status:
-        return jsonify({"error": "Task non trovato"}), 404
+        return jsonify({"error": "Task not found"}), 404
     
     status = conversion_status[task_id].copy()
     return jsonify(status)
