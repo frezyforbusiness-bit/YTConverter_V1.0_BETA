@@ -1,6 +1,6 @@
 Flask==3.0.0
 flask-cors==4.0.0
-yt-dlp>=2025.12.8
+yt-dlp>=2024.12.13
 librosa>=0.10.0
 numpy>=1.24.0
 scipy>=1.10.0
