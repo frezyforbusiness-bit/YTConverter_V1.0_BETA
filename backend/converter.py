@@ -110,8 +110,7 @@ class YouTubeAudioConverter:
                 'youtube': {
                     'player_client': ['ios', 'android', 'web'],
                     'player_skip': ['webpage', 'configs'],
-                    'skip': ['dash', 'hls'],  # Skip problematic streaming formats
-                    'player_js_version': 'actual',  # Use actual player JS version (helps with signature extraction)
+                    # Non usiamo skip per dash/hls o player_js_version perché possono causare problemi
                 }
             },
             # Additional options to help with extraction
@@ -129,7 +128,8 @@ class YouTubeAudioConverter:
             'file_access_retries': 3,
         }
         
-        # Add cookies file if provided
+        # Add cookies file if provided (priority)
+        # IMPORTANTE: I cookies sono ESSENZIALI per evitare blocchi di YouTube
         if cookies_file and os.path.exists(cookies_file):
             ydl_opts['cookiefile'] = cookies_file
             print("Using cookies file for authentication")
@@ -244,15 +244,17 @@ class YouTubeAudioConverter:
                     if 'bot' in error_msg.lower() or 'sign in' in error_msg.lower():
                         print(f"Bot detection error, trying next client...")
                         continue
-                    # Se è un errore di player response, prova il prossimo client
-                elif 'player response' in error_msg.lower() or 'failed to extract' in error_msg.lower() or 'failed to parse json' in error_msg.lower():
-                    print(f"Player response/JSON parsing error, trying next client configuration...")
-                    # Se NON abbiamo cookies, questo è probabilmente il problema principale
-                    if not cookies_file and not browser_name:
-                        print(f"WARNING: No cookies configured! YouTube is likely blocking the request. Cookies are REQUIRED for most videos.")
-                    elif cookies_file or browser_name:
-                        print(f"Note: Cookies are configured but extraction still failing. This might indicate YouTube restrictions or invalid cookies.")
-                    continue
+                    # Se è un errore di player response o JSON parsing, prova il prossimo client
+                    elif ('player response' in error_msg.lower() or 
+                          'failed to extract' in error_msg.lower() or 
+                          'failed to parse json' in error_msg.lower()):
+                        print(f"Player response/JSON parsing error, trying next client configuration...")
+                        # Se NON abbiamo cookies, questo è probabilmente il problema principale
+                        if not cookies_file and not browser_name:
+                            print(f"WARNING: No cookies configured! YouTube is likely blocking the request. Cookies are REQUIRED for most videos.")
+                        elif cookies_file or browser_name:
+                            print(f"Note: Cookies are configured but extraction still failing. This might indicate YouTube restrictions or invalid cookies.")
+                        continue
                     # Se è un errore di playlist, rilanciamo subito
                     elif 'playlist' in error_msg.lower():
                         raise ValueError("Playlists are not supported. Use a single video URL.")
