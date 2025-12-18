@@ -1,4 +1,7 @@
-const API_URL = 'http://localhost:5000';
+// API URL - automatically detects production or development
+const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'http://localhost:5000'
+    : window.location.origin; // Use same origin in production
 
 const form = document.getElementById('converterForm');
 const convertBtn = document.getElementById('convertBtn');

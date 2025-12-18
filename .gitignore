@@ -51,6 +51,13 @@ tmp/
 *.mp4
 *.webm
 
+# Deployment files (optional - uncomment if you don't want to commit)
+# vercel.json
+# netlify.toml
+# render.yaml
+# Procfile
+# runtime.txt
+
 # Logs
 *.log
 

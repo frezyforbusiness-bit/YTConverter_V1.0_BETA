@@ -189,11 +189,15 @@ def health():
 
 
 if __name__ == '__main__':
-    # Verifica che ffmpeg sia disponibile
+    # Check if ffmpeg is available
     if not converter.check_ffmpeg():
-        print("ERRORE: ffmpeg non trovato. Assicurati che sia installato sul sistema.")
+        print("ERROR: ffmpeg not found. Make sure it's installed on the system.")
         exit(1)
     
-    print("Server avviato su http://localhost:5000")
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    # Get port from environment variable or use default
+    port = int(os.environ.get('PORT', 5000))
+    debug = os.environ.get('FLASK_ENV') == 'development'
+    
+    print(f"Server starting on http://0.0.0.0:{port}")
+    app.run(debug=debug, host='0.0.0.0', port=port)
 
