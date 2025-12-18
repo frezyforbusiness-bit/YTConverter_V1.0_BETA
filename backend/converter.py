@@ -21,6 +21,9 @@ class YouTubeAudioConverter:
         """
         self.temp_dir = temp_dir or tempfile.gettempdir()
         self.ensure_temp_dir()
+        # Path del file cookies (relativo alla directory backend)
+        backend_dir = os.path.dirname(os.path.abspath(__file__))
+        self.cookies_path = os.path.join(backend_dir, 'cookies.txt')
     
     def ensure_temp_dir(self):
         """Assicura che la directory temporanea esista"""
@@ -99,6 +102,13 @@ class YouTubeAudioConverter:
                 }
             }
         }
+        
+        # Aggiungi cookies se il file esiste
+        if os.path.exists(self.cookies_path):
+            ydl_opts['cookiefile'] = self.cookies_path
+            print(f"Using cookies file: {self.cookies_path}")
+        else:
+            print(f"Cookies file not found at {self.cookies_path}, proceeding without cookies")
         
         try:
             print("Downloading video using mweb client (optimized for cloud)...")
