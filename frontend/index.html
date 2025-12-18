@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Audio Converter</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&family=Exo+2:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎵 YouTube to Audio</h1>
+            <p class="subtitle">Trasforma i tuoi video in musica, tipo magia ✨</p>
+        </header>
+
+        <main>
+            <div class="converter-card">
+                <form id="converterForm">
+                    <div class="form-group">
+                        <label for="youtubeUrl">Link YouTube</label>
+                        <input 
+                            type="url" 
+                            id="youtubeUrl" 
+                            name="youtubeUrl" 
+                            placeholder="https://www.youtube.com/watch?v=..."
+                            required
+                        >
+                        <small class="info-hint">
+                            💡 Solo video singoli, niente playlist (scusa ma è così 🤷)
+                        </small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="audioFormat">Formato Audio</label>
+                        <select id="audioFormat" name="audioFormat" required>
+                            <option value="mp3">MP3</option>
+                            <option value="wav">WAV</option>
+                            <option value="flac">FLAC</option>
+                            <option value="ogg">OGG</option>
+                            <option value="m4a">M4A/AAC</option>
+                            <option value="opus">Opus</option>
+                        </select>
+                    </div>
+
+                    <div class="auto-detect-box">
+                        <small>
+                            🤖 BPM e scala? Li trovo io automaticamente, tranquillo!
+                        </small>
+                    </div>
+
+                    <button type="submit" id="convertBtn" class="btn-primary">
+                        <span class="btn-text">🚀 Vai, converti!</span>
+                        <span class="btn-loader" style="display: none;">
+                            <span class="spinner"></span>
+                            Aspetta un attimo...
+                        </span>
+                    </button>
+                </form>
+
+                <div id="errorMessage" class="error-message" style="display: none;"></div>
+                <div id="successMessage" class="success-message" style="display: none;"></div>
+                
+                <!-- Progress Bar -->
+                <div id="progressContainer" style="display: none; margin-top: 20px;">
+                    <div class="progress-info">
+                        <span id="progressMessage" class="progress-message">Inizializzazione...</span>
+                        <span id="progressPercent" class="progress-percent">0%</span>
+                    </div>
+                    <div class="progress-bar-container">
+                        <div id="progressBar" class="progress-bar"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="info-section">
+                <h2>Come funziona? Facile!</h2>
+                <ol class="steps-list">
+                    <li>Incolla il link YouTube qui sopra 👆</li>
+                    <li>Scegli il formato che ti piace di più</li>
+                    <li>Premi il bottone e rilassati, faccio tutto io 😎</li>
+                </ol>
+
+                <h3>Formati disponibili</h3>
+                <ul class="formats-list">
+                    <li><strong>MP3</strong> - Il classico, funziona ovunque</li>
+                    <li><strong>WAV</strong> - Qualità top, file più grandi</li>
+                    <li><strong>FLAC</strong> - Per i puristi del suono</li>
+                    <li><strong>OGG</strong> - Open source e figo</li>
+                    <li><strong>M4A/AAC</strong> - Per i fan Apple</li>
+                    <li><strong>Opus</strong> - Il futuro, già qui</li>
+                </ul>
+            </div>
+        </main>
+
+        <footer>
+            <p>Fatto con ❤️ per chi ama la musica</p>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
+
