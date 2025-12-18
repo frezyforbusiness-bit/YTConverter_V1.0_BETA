@@ -227,19 +227,17 @@ form.addEventListener('submit', async (e) => {
     let pollInterval = null;
     
     try {
-        // Get saved cookies
-        const savedCookies = localStorage.getItem('youtubeCookies');
+        // Automatically detect browser and use it for cookie extraction
+        const detectedBrowser = detectBrowser();
         
         // Invia richiesta al backend per avviare la conversione
         const requestBody = {
             url: youtubeUrl,
-            format: audioFormat
+            format: audioFormat,
+            browser: detectedBrowser  // Always send browser for automatic cookie extraction
         };
         
-        // Add cookies if available (and not skipped)
-        if (savedCookies && savedCookies !== 'skipped') {
-            requestBody.cookies = savedCookies;
-        }
+        console.log(`Using browser: ${detectedBrowser} for automatic cookie extraction`);
                
                const response = await fetch(`${API_URL}/convert`, {
                    method: 'POST',

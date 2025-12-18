@@ -239,7 +239,7 @@ class YouTubeAudioConverter:
                         if not browser_name:
                             print(f"WARNING: No browser configured for cookie extraction! YouTube is likely blocking the request.")
                         else:
-                            print(f"Note: Browser cookie extraction is configured but still failing. The browser might not be installed on the server or cookies might not be accessible.")
+                            print(f"Note: Browser cookie extraction from {browser_name} is configured but still failing. The browser might not be installed on the server or cookies might not be accessible.")
                         continue
                     # Se è un errore di playlist, rilanciamo subito
                     elif 'playlist' in error_msg.lower():
@@ -271,13 +271,8 @@ class YouTubeAudioConverter:
                 raise Exception("Failed to download video: Unknown error")
         
         finally:
-            # Clean up cookies file if it was created
-            if cookies_file and os.path.exists(cookies_file):
-                try:
-                    os.remove(cookies_file)
-                    print(f"Cleaned up cookies file: {cookies_file}")
-                except Exception as e:
-                    print(f"Warning: Could not remove cookies file {cookies_file}: {e}")
+            # No cleanup needed - cookies are extracted directly from browser
+            pass
     
     def convert_to_audio(self, video_path, audio_format, output_path=None):
         """
