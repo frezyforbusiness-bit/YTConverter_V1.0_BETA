@@ -32,6 +32,47 @@ function hideMessages() {
 const cookiesBanner = document.getElementById('cookiesBanner');
 const acceptCookiesBtn = document.getElementById('acceptCookies');
 
+// Detect browser automatically
+function detectBrowser() {
+    const userAgent = navigator.userAgent.toLowerCase();
+    
+    // Firefox
+    if (userAgent.includes('firefox') && !userAgent.includes('seamonkey')) {
+        return 'firefox';
+    }
+    // Chrome (but not Edge, Opera, etc.)
+    if (userAgent.includes('chrome') && !userAgent.includes('edg') && !userAgent.includes('opr') && !userAgent.includes('brave')) {
+        return 'chrome';
+    }
+    // Edge
+    if (userAgent.includes('edg')) {
+        return 'edge';
+    }
+    // Opera
+    if (userAgent.includes('opr') || userAgent.includes('opera')) {
+        return 'opera';
+    }
+    // Brave
+    if (userAgent.includes('brave')) {
+        return 'brave';
+    }
+    // Chromium
+    if (userAgent.includes('chromium')) {
+        return 'chromium';
+    }
+    // Vivaldi
+    if (userAgent.includes('vivaldi')) {
+        return 'vivaldi';
+    }
+    // Safari (not directly supported by yt-dlp, but we can try chrome)
+    if (userAgent.includes('safari') && !userAgent.includes('chrome')) {
+        return 'chrome'; // Try chrome as fallback
+    }
+    
+    // Default fallback
+    return 'chrome';
+}
+
 // Check if user has already accepted/declined cookies
 function checkCookiesConsent() {
     const cookiesConsent = localStorage.getItem('cookiesConsent');
@@ -41,30 +82,20 @@ function checkCookiesConsent() {
     }
 }
 
-// Cookies Modal Management
-const cookiesModal = document.getElementById('cookiesModal');
-const closeCookiesModal = document.getElementById('closeCookiesModal');
-const cookiesInput = document.getElementById('cookiesInput');
-const saveCookiesBtn = document.getElementById('saveCookies');
-const skipCookiesBtn = document.getElementById('skipCookies');
-
-// Check if cookies are already saved
-function hasCookiesSaved() {
-    return localStorage.getItem('youtubeCookies') !== null;
-}
-
-// Handle accept cookies
+// Handle accept cookies - automatically detect and save browser
 acceptCookiesBtn.addEventListener('click', () => {
     localStorage.setItem('cookiesConsent', 'accepted');
     cookiesBanner.style.display = 'none';
     // Set a cookie to remember the choice (for backend if needed)
     document.cookie = 'cookiesConsent=accepted; path=/; max-age=31536000'; // 1 year
     
-    // Show cookies setup modal if cookies are not saved
-    if (!hasCookiesSaved()) {
-        setTimeout(() => {
-            cookiesModal.style.display = 'flex';
-        }, 300);
+    // Automatically detect browser and save preference
+    const detectedBrowser = detectBrowser();
+    try {
+        localStorage.setItem('youtubeCookiesBrowser', detectedBrowser);
+        console.log(`Auto-detected browser: ${detectedBrowser}`);
+    } catch (e) {
+        console.error('Failed to save browser preference:', e);
     }
 });
 
@@ -77,75 +108,6 @@ if (termsLink) {
         alert('Terms of use page - to be implemented');
     });
 }
-
-// Close modal handlers
-closeCookiesModal.addEventListener('click', () => {
-    cookiesModal.style.display = 'none';
-});
-
-// Close modal when clicking outside
-cookiesModal.addEventListener('click', (e) => {
-    if (e.target === cookiesModal) {
-        cookiesModal.style.display = 'none';
-    }
-});
-
-// Save cookies
-saveCookiesBtn.addEventListener('click', () => {
-    const cookiesContent = cookiesInput.value.trim();
-    const browserSelect = document.getElementById('browserSelect');
-    const selectedBrowser = browserSelect.value;
-    
-    // Check if browser is selected instead of manual cookies
-    if (selectedBrowser && !cookiesContent) {
-        // Save browser preference
-        try {
-            localStorage.setItem('youtubeCookiesBrowser', selectedBrowser);
-            localStorage.removeItem('youtubeCookies'); // Remove manual cookies if browser is selected
-            cookiesModal.style.display = 'none';
-            showSuccess(`Cookies will be extracted from ${selectedBrowser} automatically! 🎉`);
-            cookiesInput.value = '';
-            browserSelect.value = '';
-            return;
-        } catch (e) {
-            showError('Failed to save browser preference. 😅');
-            return;
-        }
-    }
-    
-    // Manual cookies
-    if (!cookiesContent) {
-        showError('Please paste your cookies content or select a browser! 🍪');
-        return;
-    }
-    
-    // Basic validation: should contain youtube.com
-    if (!cookiesContent.includes('youtube.com')) {
-        showError('This doesn\'t look like YouTube cookies. Make sure you exported cookies for YouTube! 🍪');
-        return;
-    }
-    
-    // Save cookies to localStorage
-    try {
-        localStorage.setItem('youtubeCookies', cookiesContent);
-        localStorage.removeItem('youtubeCookiesBrowser'); // Remove browser preference if manual cookies are used
-        cookiesModal.style.display = 'none';
-        showSuccess('Cookies saved successfully! You can now convert videos. 🎉');
-        
-        // Clear the textarea
-        cookiesInput.value = '';
-        browserSelect.value = '';
-    } catch (e) {
-        showError('Failed to save cookies. Your browser may not support localStorage. 😅');
-    }
-});
-
-// Skip cookies (try without)
-skipCookiesBtn.addEventListener('click', () => {
-    localStorage.setItem('youtubeCookies', 'skipped');
-    cookiesModal.style.display = 'none';
-    showSuccess('You can try converting without cookies. If it fails, you can add cookies later. 👍');
-});
 
 // Check cookies consent on page load
 checkCookiesConsent();

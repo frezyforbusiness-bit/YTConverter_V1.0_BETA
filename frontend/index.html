@@ -22,59 +22,6 @@
         </div>
     </div>
 
-    <!-- Cookies Setup Modal -->
-    <div id="cookiesModal" class="cookies-modal" style="display: none;">
-        <div class="cookies-modal-content">
-            <div class="cookies-modal-header">
-                <h2>🍪 Setup YouTube Cookies</h2>
-                <button id="closeCookiesModal" class="close-modal-btn">&times;</button>
-            </div>
-            <div class="cookies-modal-body">
-                <p>To convert YouTube videos, we need your YouTube cookies. Please follow these steps:</p>
-                <ol class="cookies-steps">
-                    <li>Install a browser extension:
-                        <ul>
-                            <li><strong>Chrome:</strong> <a href="https://chrome.google.com/webstore/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc" target="_blank">Get cookies.txt LOCALLY</a></li>
-                            <li><strong>Firefox:</strong> <a href="https://addons.mozilla.org/en-US/firefox/addon/cookies-txt/" target="_blank">cookies.txt</a></li>
-                        </ul>
-                    </li>
-                    <li>Go to <a href="https://www.youtube.com" target="_blank">YouTube.com</a> and make sure you're logged in</li>
-                    <li>Click the extension icon and export cookies for YouTube</li>
-                    <li>Paste the cookies content below:</li>
-                </ol>
-                <div class="form-group">
-                    <label for="cookiesInput">Cookies Content (Netscape format)</label>
-                    <textarea 
-                        id="cookiesInput" 
-                        name="cookiesInput" 
-                        rows="8"
-                        placeholder="Paste your cookies.txt content here..."
-                        class="cookies-textarea"
-                    ></textarea>
-                </div>
-                <div class="form-group" style="margin-top: 20px;">
-                    <label>Or extract cookies automatically from browser:</label>
-                    <select id="browserSelect" class="browser-select">
-                        <option value="">-- Select Browser --</option>
-                        <option value="firefox">Firefox</option>
-                        <option value="chrome">Chrome</option>
-                        <option value="chromium">Chromium</option>
-                        <option value="edge">Microsoft Edge</option>
-                        <option value="opera">Opera</option>
-                        <option value="brave">Brave</option>
-                        <option value="vivaldi">Vivaldi</option>
-                    </select>
-                    <small class="info-hint" style="display: block; margin-top: 8px;">
-                        💡 If you're logged into YouTube in your browser, we can extract cookies automatically (server-side only)
-                    </small>
-                </div>
-                <div class="cookies-modal-buttons">
-                    <button id="saveCookies" class="btn-save-cookies">Save Cookies</button>
-                    <button id="skipCookies" class="btn-skip-cookies">Skip (Try without cookies)</button>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <div class="container">
         <header>
