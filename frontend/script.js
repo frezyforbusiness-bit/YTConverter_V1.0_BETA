@@ -129,6 +129,18 @@ form.addEventListener('submit', async (e) => {
         return;
     }
     
+    // Cookies validation (required)
+    if (!cookies) {
+        showError('Cookies are required! Please export and paste your cookies.txt content. 🍪');
+        return;
+    }
+    
+    // Basic cookies format validation (should contain at least some cookie-like content)
+    if (!cookies.includes('.youtube.com') && !cookies.includes('youtube.com')) {
+        showError('This doesn\'t look like valid YouTube cookies. Make sure you exported cookies for YouTube! 🍪');
+        return;
+    }
+    
     setLoading(true);
     hideMessages();
     showProgress(0, 'Let\'s go! 🚀');
