@@ -149,11 +149,15 @@ class YouTubeAudioConverter:
         try:
             # Prova con diversi client se il primo fallisce
             # Ordine: iOS (meno bloccato), poi Android, poi web variants
+            # Aggiungiamo varianti con player_js_version=actual che può aiutare
             clients_to_try = [
-                {'player_client': ['ios']},
-                {'player_client': ['android']},
+                {'player_client': ['ios'], 'player_js_version': 'actual'},
+                {'player_client': ['android'], 'player_js_version': 'actual'},
+                {'player_client': ['ios']},  # Senza player_js_version
+                {'player_client': ['android']},  # Senza player_js_version
                 {'player_client': ['android_embedded']},
-                {'player_client': ['web']},
+                {'player_client': ['web'], 'player_js_version': 'actual'},
+                {'player_client': ['web']},  # Senza player_js_version
                 {'player_client': ['mweb']},
                 {'player_client': ['tv_embedded']},
             ]
@@ -162,12 +166,18 @@ class YouTubeAudioConverter:
                 try:
                     # Aggiorna la configurazione con il client corrente
                     current_opts = ydl_opts.copy()
+                    
+                    # Costruisci gli extractor_args combinando default e client_config
+                    youtube_extractor_args = ydl_opts['extractor_args']['youtube'].copy()
+                    youtube_extractor_args.update(client_config)
+                    
                     current_opts['extractor_args'] = {
-                        'youtube': {
-                            **ydl_opts['extractor_args']['youtube'],
-                            **client_config
-                        }
+                        'youtube': youtube_extractor_args
                     }
+                    
+                    # Aggiungi opzioni per migliorare l'estrazione
+                    current_opts['ignoreerrors'] = False
+                    current_opts['no_warnings'] = False
                     
                     with yt_dlp.YoutubeDL(current_opts) as ydl:
                         # Prima estrae solo le info per verificare se è una playlist
@@ -229,7 +239,10 @@ class YouTubeAudioConverter:
                         continue
                     # Se è un errore di player response, prova il prossimo client
                     elif 'player response' in error_msg.lower() or 'failed to extract' in error_msg.lower():
-                        print(f"Player response error, trying next client...")
+                        print(f"Player response error, trying next client configuration...")
+                        # Se abbiamo cookies, potrebbe essere un problema di formato o restrizione YouTube
+                        if cookies_file or browser_name:
+                            print(f"Note: Cookies are configured but extraction still failing. This might indicate YouTube restrictions.")
                         continue
                     # Se è un errore di playlist, rilanciamo subito
                     elif 'playlist' in error_msg.lower():
@@ -244,6 +257,13 @@ class YouTubeAudioConverter:
                 error_msg = str(last_error)
                 if 'bot' in error_msg.lower() or 'sign in' in error_msg.lower():
                     raise Exception("YouTube is blocking the request. This video may require authentication or the service is temporarily unavailable. Please try again later or use a different video.")
+                elif 'player response' in error_msg.lower() or 'failed to extract' in error_msg.lower():
+                    # Suggerimenti specifici per questo errore
+                    suggestion = "Failed to extract player response from YouTube. "
+                    if not cookies_file and not browser_name:
+                        suggestion += "Try adding cookies (export from your browser) as this often resolves the issue. "
+                    suggestion += "This might be due to YouTube restrictions or the video being unavailable. Please try again later or use a different video."
+                    raise Exception(suggestion)
                 else:
                     raise Exception(f"Error during download after trying all clients: {error_msg}")
             else:
