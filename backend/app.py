@@ -44,13 +44,12 @@ def index():
 def convert_task(task_id, youtube_url, audio_format):
     """Esegue la conversione in un thread separato"""
     try:
-        conversion_status[task_id] = {
+        # Update status (task already exists from /convert endpoint)
+        conversion_status[task_id].update({
             'status': 'downloading',
             'progress': 10,
-            'message': 'Starting download...',
-            'file': None,
-            'error': None
-        }
+            'message': 'Starting download...'
+        })
         
         # Download video
         conversion_status[task_id].update({
@@ -163,6 +162,16 @@ def convert():
         # Generate unique task_id
         task_id = str(uuid.uuid4())
         print(f"Generated task_id: {task_id}")
+        
+        # Initialize task status BEFORE starting thread
+        # This ensures the task is always available for status checks
+        conversion_status[task_id] = {
+            'status': 'pending',
+            'progress': 0,
+            'message': 'Initializing conversion...',
+            'file': None,
+            'error': None
+        }
         
         # Start conversion in separate thread
         thread = threading.Thread(target=convert_task, args=(task_id, youtube_url, audio_format))
