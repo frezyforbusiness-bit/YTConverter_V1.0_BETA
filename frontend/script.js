@@ -204,12 +204,43 @@ form.addEventListener('submit', async (e) => {
             return;
         }
         
+        console.log('Task ID received:', taskId);
+        console.log('Starting status polling in 500ms...');
+        
+        // Piccolo delay prima di iniziare il polling per evitare race condition
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Contatore per gestire errori 404 ripetuti
+        let notFoundCount = 0;
+        const MAX_NOT_FOUND_RETRIES = 5;
+        
         // Inizia il polling per lo stato
         pollInterval = setInterval(async () => {
             try {
+                console.log(`Polling status for task: ${taskId}`);
                 const statusResponse = await fetch(`${API_URL}/status/${taskId}`);
                 
                 if (!statusResponse.ok) {
+                    // Se è 404, potrebbe essere un race condition - riprova dopo un po'
+                    if (statusResponse.status === 404) {
+                        notFoundCount++;
+                        console.warn(`Task ${taskId} not found (404), retry ${notFoundCount}/${MAX_NOT_FOUND_RETRIES}`);
+                        
+                        // Se abbiamo provato troppe volte, ferma il polling
+                        if (notFoundCount >= MAX_NOT_FOUND_RETRIES) {
+                            clearInterval(pollInterval);
+                            showError(`Task not found after ${MAX_NOT_FOUND_RETRIES} attempts. The conversion may have failed to start.`);
+                            setLoading(false);
+                            hideProgress();
+                            return;
+                        }
+                        // Altrimenti continua a riprovare
+                        return;
+                    }
+                    
+                    // Reset contatore se non è 404
+                    notFoundCount = 0;
+                    
                     clearInterval(pollInterval);
                     let errorMsg = 'Server communication issue';
                     try {

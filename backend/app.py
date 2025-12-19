@@ -184,12 +184,23 @@ def convert():
             'error': None
         }
         
+        # Verify task was added (safety check)
+        if task_id not in conversion_status:
+            print(f"ERROR: Task {task_id} was not added to conversion_status!")
+            return jsonify({"error": "Failed to initialize task"}), 500
+        
+        print(f"✓ Task {task_id} initialized in conversion_status (total tasks: {len(conversion_status)})")
+        
         # Start conversion in separate thread
         thread = threading.Thread(target=convert_task, args=(task_id, youtube_url, audio_format))
         thread.daemon = True
         thread.start()
         
         print(f"Thread started for task_id: {task_id}")
+        
+        # Small delay to ensure task is fully registered before returning response
+        time.sleep(0.1)
+        
         response_data = {"task_id": task_id}
         response = jsonify(response_data)
         print(f"Returning response: {response_data}")
@@ -206,14 +217,22 @@ def convert():
 def get_status(task_id):
     """Endpoint to get conversion status"""
     print(f"Status check for task_id: {task_id}")
-    print(f"Available tasks: {list(conversion_status.keys())[:5]}...")  # Log first 5 task IDs for debugging
+    print(f"Total tasks in memory: {len(conversion_status)}")
+    if len(conversion_status) > 0:
+        print(f"Available task IDs (first 5): {list(conversion_status.keys())[:5]}")
     
     if task_id not in conversion_status:
         print(f"⚠ Task {task_id} not found in conversion_status")
-        return jsonify({"error": "Task not found", "task_id": task_id}), 404
+        print(f"   This could be a race condition or the task was never created")
+        print(f"   Request timestamp: {time.time()}")
+        return jsonify({
+            "error": "Task not found", 
+            "task_id": task_id,
+            "available_tasks": len(conversion_status)
+        }), 404
     
     status = conversion_status[task_id].copy()
-    print(f"✓ Task {task_id} found, status: {status.get('status')}")
+    print(f"✓ Task {task_id} found, status: {status.get('status')}, progress: {status.get('progress')}%")
     return jsonify(status)
 
 
