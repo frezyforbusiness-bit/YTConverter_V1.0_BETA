@@ -177,84 +177,108 @@ class YouTubeAudioConverter:
         if not self.validate_youtube_url(youtube_url):
             raise ValueError("Invalid YouTube URL")
         
-        # Optimized yt-dlp configuration for cloud environments (Render, Docker, VPS)
-        # Using mweb client only - often less blocked on cloud
-        # Force IPv4 - important for Render (often prefers IPv6 which breaks YouTube)
-        ydl_opts = {
-            'format': 'bestaudio/best',
-            'outtmpl': os.path.join(self.temp_dir, '%(title)s.%(ext)s'),
-            'noplaylist': True,
-            'quiet': True,
-            'cachedir': False,
-            'force_ipv4': True,  # Force IPv4 - critical for Render
-            'retries': 5,
-            'socket_timeout': 30,
-            'extractor_args': {
-                'youtube': {
-                    'player_client': ['mweb'],  # Mobile web client - less blocked on cloud
+        # Lista di client da provare in ordine (fallback se uno fallisce)
+        # Ogni client ha caratteristiche diverse e alcuni funzionano meglio con cookies
+        player_clients = ['ios', 'android', 'web', 'mweb']
+        
+        # Prova ogni client finché uno non funziona
+        last_error = None
+        for client in player_clients:
+            try:
+                print(f"Trying YouTube client: {client}...")
+                
+                # Optimized yt-dlp configuration for cloud environments (Render, Docker, VPS)
+                # Force IPv4 - important for Render (often prefers IPv6 which breaks YouTube)
+                ydl_opts = {
+                    'format': 'bestaudio/best',
+                    'outtmpl': os.path.join(self.temp_dir, '%(title)s.%(ext)s'),
+                    'noplaylist': True,
+                    'quiet': False,  # Mostra warnings per debug
+                    'no_warnings': False,
+                    'cachedir': False,
+                    'force_ipv4': True,  # Force IPv4 - critical for Render
+                    'retries': 3,
+                    'socket_timeout': 30,
+                    'extractor_args': {
+                        'youtube': {
+                            'player_client': [client],
+                        }
+                    }
                 }
-            }
-        }
-        
-        # Aggiungi cookies se il file esiste
-        if os.path.exists(self.cookies_path):
-            ydl_opts['cookiefile'] = self.cookies_path
-            print(f"Using cookies file: {self.cookies_path}")
-        else:
-            print(f"Cookies file not found at {self.cookies_path}, proceeding without cookies")
-        
-        try:
-            print("Downloading video using mweb client (optimized for cloud)...")
-            
-            # Extract info first (validates URL and checks for playlists)
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(youtube_url, download=False)
-            
-            # Validate: reject playlists
-            if info.get('_type') == 'playlist':
-                raise ValueError("Playlists are not supported. Use a single video URL.")
-            
-            # Handle single-entry playlists (YouTube sometimes returns this)
-            if 'entries' in info and info['entries']:
-                entries = list(info['entries'])
-                if len(entries) > 1:
+                
+                # Aggiungi cookies se il file esiste
+                if os.path.exists(self.cookies_path):
+                    ydl_opts['cookiefile'] = self.cookies_path
+                    print(f"Using cookies file: {self.cookies_path}")
+                else:
+                    print(f"Cookies file not found at {self.cookies_path}, proceeding without cookies")
+                
+                # Extract info first (validates URL and checks for playlists)
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    info = ydl.extract_info(youtube_url, download=False)
+                
+                # Validate: reject playlists
+                if info.get('_type') == 'playlist':
                     raise ValueError("Playlists are not supported. Use a single video URL.")
-                if len(entries) == 1:
-                    info = entries[0]
-            
-            # Validate video ID
-            if not info.get('id'):
-                raise ValueError("Unable to extract video information. Check that the URL is correct.")
-            
-            # If only info is needed, return now
-            if get_info_only:
-                return None, info
-            
-            # Download the video
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(youtube_url, download=True)
-                video_path = ydl.prepare_filename(info)
-            
-            # Handle different file extensions (yt-dlp may download with different extension)
-            if not os.path.exists(video_path):
-                base_name = os.path.splitext(video_path)[0]
-                for ext in ['.webm', '.m4a', '.mp4', '.opus', '.ogg']:
-                    potential_path = base_name + ext
-                    if os.path.exists(potential_path):
-                        video_path = potential_path
-                        break
-            
-            # Final validation
-            if not os.path.exists(video_path):
-                raise FileNotFoundError("Video file not found after download")
-            
-            # Success!
-            print("Successfully downloaded video")
-            return video_path, info
-            
-        except Exception as e:
-            error_msg = str(e)
-            print(f"Download failed: {error_msg[:200]}...")
+                
+                # Handle single-entry playlists (YouTube sometimes returns this)
+                if 'entries' in info and info['entries']:
+                    entries = list(info['entries'])
+                    if len(entries) > 1:
+                        raise ValueError("Playlists are not supported. Use a single video URL.")
+                    if len(entries) == 1:
+                        info = entries[0]
+                
+                # Validate video ID
+                if not info.get('id'):
+                    raise ValueError("Unable to extract video information. Check that the URL is correct.")
+                
+                # Check if audio formats are available
+                formats = info.get('formats', [])
+                audio_formats = [f for f in formats if f.get('acodec') != 'none' and f.get('vcodec') == 'none']
+                
+                if not audio_formats and not get_info_only:
+                    # Se non ci sono formati audio puri, continua comunque (bestaudio/best prenderà il migliore)
+                    print(f"⚠ Warning: No pure audio formats found, will use best available format")
+                
+                # If only info is needed, return now
+                if get_info_only:
+                    return None, info
+                
+                # Download the video
+                print(f"Downloading with {client} client...")
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    info = ydl.extract_info(youtube_url, download=True)
+                    video_path = ydl.prepare_filename(info)
+                
+                # Handle different file extensions (yt-dlp may download with different extension)
+                if not os.path.exists(video_path):
+                    base_name = os.path.splitext(video_path)[0]
+                    for ext in ['.webm', '.m4a', '.mp4', '.opus', '.ogg']:
+                        potential_path = base_name + ext
+                        if os.path.exists(potential_path):
+                            video_path = potential_path
+                            break
+                
+                # Final validation
+                if not os.path.exists(video_path):
+                    raise FileNotFoundError("Video file not found after download")
+                
+                # Success!
+                print(f"✓ Successfully downloaded video using {client} client")
+                return video_path, info
+                
+            except Exception as e:
+                error_msg = str(e)
+                print(f"⚠ Client {client} failed: {error_msg[:200]}")
+                last_error = e
+                # Continue to next client
+                continue
+        
+        # Se tutti i client hanno fallito, solleva l'ultimo errore
+        if last_error:
+            error_msg = str(last_error)
+            print(f"All clients failed. Last error: {error_msg[:200]}...")
             
             # Don't retry on playlist errors (user error)
             if 'playlist' in error_msg.lower():
