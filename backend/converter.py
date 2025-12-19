@@ -264,9 +264,10 @@ class YouTubeAudioConverter:
                 
                 # Optimized yt-dlp configuration for cloud environments (Render, Docker, VPS)
                 # Force IPv4 - important for Render (often prefers IPv6 which breaks YouTube)
-                # Usa 'best' invece di 'bestaudio/best' per includere anche video+audio se necessario
+                # Usa formato flessibile che prova diversi formati in ordine di preferenza
                 ydl_opts = {
-                    'format': 'best[ext=webm]/best[ext=mp4]/best',  # Prova formati comuni, poi il migliore disponibile
+                    # Prova prima formati audio puri, poi video+audio, poi qualsiasi formato disponibile
+                    'format': 'bestaudio[ext=m4a]/bestaudio[ext=webm]/bestaudio[ext=mp3]/bestaudio/best[ext=m4a]/best[ext=webm]/best[ext=mp4]/best',
                     'outtmpl': os.path.join(self.temp_dir, '%(title)s.%(ext)s'),
                     'noplaylist': True,
                     'quiet': False,  # Mostra warnings per debug
@@ -275,6 +276,7 @@ class YouTubeAudioConverter:
                     'force_ipv4': True,  # Force IPv4 - critical for Render
                     'retries': 3,
                     'socket_timeout': 30,
+                    'ignoreerrors': False,
                     'extractor_args': {
                         'youtube': {
                             'player_client': [client],
