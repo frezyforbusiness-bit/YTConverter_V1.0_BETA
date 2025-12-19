@@ -311,8 +311,12 @@ class YouTubeAudioConverter:
         """
         error_lower = error_msg.lower()
         
+        # Only images available - usually means video is restricted or cookies invalid
+        if 'only images' in error_lower or 'requested format is not available' in error_lower:
+            raise Exception("This video is not available for download. It may be private, restricted, or require special authentication. The cookies may also be expired or invalid. Please try a different video or update your cookies.")
+        
         # Bot detection / authentication required
-        if 'bot' in error_lower or 'sign in' in error_lower:
+        elif 'bot' in error_lower or 'sign in' in error_lower:
             raise Exception("YouTube is blocking the request. This video may require authentication or the service is temporarily unavailable. Please try again later or use a different video.")
         
         # Player response extraction failed (most common error)
