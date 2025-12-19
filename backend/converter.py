@@ -25,24 +25,22 @@ class YouTubeAudioConverter:
         
         # Path del file cookies - controlla in ordine di priorità:
         # 1. Variabile d'ambiente COOKIES_FILE (custom path)
-        # 2. Render Secret Files (/etc/secrets/cookies.txt)
+        # 2. Render Secret Files (copiati in directory scrivibile)
         # 3. Path di default (backend/cookies.txt)
         cookies_file_env = os.environ.get('COOKIES_FILE')
         if cookies_file_env:
             self.cookies_path = cookies_file_env
         else:
-            # Controlla prima i Render Secret Files
-            render_secrets_path = '/etc/secrets/cookies.txt'
-            if os.path.exists(render_secrets_path):
-                self.cookies_path = render_secrets_path
-                print(f"✓ Using Render Secret File: {render_secrets_path}")
-            else:
-                # Path di default (relativo alla directory backend)
-                backend_dir = os.path.dirname(os.path.abspath(__file__))
-                self.cookies_path = os.path.join(backend_dir, 'cookies.txt')
+            # Path di default (relativo alla directory backend) - scrivibile
+            backend_dir = os.path.dirname(os.path.abspath(__file__))
+            self.cookies_path = os.path.join(backend_dir, 'cookies.txt')
         
         # Crea il file cookies da variabile d'ambiente se presente (per Render/produzione)
         self._create_cookies_from_env()
+        
+        # Copia Render Secret Files in directory scrivibile (se presente)
+        # I Secret Files sono read-only, quindi devono essere copiati
+        self._copy_render_secret_file()
         
         # Verifica se il file cookies esiste e informa
         if os.path.exists(self.cookies_path):
@@ -87,6 +85,42 @@ class YouTubeAudioConverter:
             except Exception as e:
                 print(f"⚠ Warning: Failed to create cookies file from COOKIES_BASE64: {e}")
                 # Non blocca l'avvio se fallisce
+    
+    def _copy_render_secret_file(self):
+        """
+        Copia il file cookies.txt da Render Secret Files in una directory scrivibile.
+        I Secret Files sono read-only (/etc/secrets/), quindi devono essere copiati
+        per essere usati da yt-dlp.
+        
+        Render Secret Files sono accessibili da:
+        - /etc/secrets/cookies.txt (path standard)
+        - /app/cookies.txt (root dell'app)
+        - cookies.txt (root relativa)
+        """
+        # Render Secret Files sono accessibili da /etc/secrets/ o dalla root dell'app
+        secret_paths = [
+            '/etc/secrets/cookies.txt',  # Path standard Render
+            '/app/cookies.txt',  # Root dell'app (Render Docker)
+            'cookies.txt'  # Root relativa
+        ]
+        
+        for secret_path in secret_paths:
+            if os.path.exists(secret_path):
+                try:
+                    # Leggi il contenuto dal Secret File (read-only)
+                    with open(secret_path, 'r', encoding='utf-8') as f:
+                        cookies_content = f.read()
+                    
+                    # Scrivi in una directory scrivibile (backend/cookies.txt)
+                    with open(self.cookies_path, 'w', encoding='utf-8') as f:
+                        f.write(cookies_content)
+                    
+                    print(f"✓ Copied Render Secret File from {secret_path} to {self.cookies_path}")
+                    return
+                except Exception as e:
+                    print(f"⚠ Warning: Failed to copy Render Secret File from {secret_path}: {e}")
+                    # Prova il prossimo path
+                    continue
     
     def check_ffmpeg(self):
         """Verifica che ffmpeg sia installato e disponibile"""
