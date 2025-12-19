@@ -68,6 +68,4 @@ Thumbs.db
 # Cookies files (sensitive data)
 cookies.txt
 **/cookies.txt
-cookies_base64.txt
-**/cookies_base64.txt
 

@@ -147,29 +147,22 @@ If needed, you can set these environment variables:
 
 ### YouTube Cookies Configuration
 
-To avoid YouTube bot detection, you can provide a cookies file:
+To avoid YouTube bot detection, cookies are handled using yt-dlp's official methods:
 
-1. **Local Development**: Place `cookies.txt` in the `backend/` directory
-
-2. **Production on Render (Recommended)**:
-   - Convert your `cookies.txt` to base64:
+1. **Local Development** (Automatic):
+   - The app automatically tries `--cookies-from-browser chrome` (or other browsers)
+   - If no browser is available, uses `--cookies cookies.txt` if the file exists
+   - To extract cookies manually:
      ```bash
-     cd backend
-     python encode_cookies.py
+     yt-dlp --cookies-from-browser chrome --cookies backend/cookies.txt
      ```
-   - Copy the base64 output
-   - In Render Dashboard → Your Service → Environment:
-     - Add Environment Variable:
-       - **Key**: `COOKIES_BASE64`
-       - **Value**: (paste the base64 string)
-   - The file will be automatically created on startup
 
-3. **Production on Railway/Other platforms**:
-   - Option A: Use `COOKIES_BASE64` environment variable (same as Render)
-   - Option B: Upload `cookies.txt` to your server via SSH
-   - Option C: Set `COOKIES_FILE=/path/to/cookies.txt` environment variable
+2. **Production (Render/Railway/etc.)**:
+   - Place `cookies.txt` in the `backend/` directory (upload via SSH/Shell)
+   - Or set `COOKIES_FILE=/path/to/cookies.txt` environment variable
+   - The file must be in Netscape format (first line: `# HTTP Cookie File` or `# Netscape HTTP Cookie File`)
 
-**Note**: The `cookies.txt` file is gitignored for security. The `COOKIES_BASE64` method is the easiest for cloud platforms like Render.
+**Note**: The `cookies.txt` file is gitignored for security. Use yt-dlp's official methods to extract cookies from your browser.
 
 ## CORS Configuration
 

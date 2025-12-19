@@ -79,73 +79,34 @@ Non sono necessari per il funzionamento base, ma puoi aggiungere:
 
 Per evitare errori "Sign in to confirm you're not a bot" da YouTube:
 
-**⚠️ NOTA**: Se ricevi l'errore `argument list too long`, usa il **Metodo 2 (SSH)** invece del Metodo 1.
+**Metodo Ufficiale yt-dlp**: Usa `--cookies-from-browser` o `--cookies`
 
-##### Metodo 1: Variabile d'Ambiente (solo per cookies piccoli < 100KB)
+##### Estrai cookies dal browser (locale):
 
-1. **Converti il file cookies.txt in base64:**
+```bash
+yt-dlp --cookies-from-browser chrome --cookies cookies.txt
+```
+
+Questo estrae i cookies da Chrome e li salva in `cookies.txt` nel formato corretto.
+
+##### Su Render (produzione):
+
+1. **Estrai i cookies localmente:**
    ```bash
-   cd backend
-   python encode_cookies.py
+   yt-dlp --cookies-from-browser chrome --cookies cookies.txt
    ```
 
-2. **Copia l'output base64** (la stringa lunga tra le linee ===)
+2. **Carica il file su Render:**
+   - Vai su Render Dashboard → Il tuo servizio → **Shell**
+   - `mkdir -p /app/backend && cd /app/backend`
+   - `nano cookies.txt` (incolla il contenuto del tuo cookies.txt locale)
+   - Salva con `Ctrl+X`, poi `Y`, poi `Enter`
 
-3. **In Render Dashboard:**
-   - Vai su **Environment** (nel menu laterale del tuo servizio)
-   - Click **"Add Environment Variable"**
-   - **Key**: `COOKIES_BASE64`
-   - **Value**: (incolla la stringa base64 copiata prima)
-   - Click **"Save Changes"**
+3. **Riavvia il servizio** su Render
 
-4. **Riavvia il servizio** (Render lo farà automaticamente dopo aver salvato)
+Il file `cookies.txt` verrà trovato automaticamente e usato con `--cookies`.
 
-**⚠️ Se ricevi "argument list too long"**, il file è troppo grande. Usa il Metodo 2.
-
-##### Metodo 1: Render Secret Files (IL PIÙ SEMPLICE) ⭐
-
-**Metodo ufficiale di Render - il più semplice!**
-
-1. **Vai su Render Dashboard:**
-   - Il tuo servizio → **Environment**
-   - Scorri fino a **"Secret Files"**
-   - Click **"+ Add Secret File"**
-
-2. **Configura:**
-   - **File Name**: `cookies.txt`
-   - **Contents**: (incolla tutto il contenuto del tuo `cookies.txt` locale)
-
-3. **Salva** → Render riavvierà automaticamente
-
-Il file sarà disponibile in `/etc/secrets/cookies.txt` e il codice lo troverà automaticamente!
-
-##### Metodo 2: Upload via API (Alternativa) 🚀
-
-**Il metodo più semplice! Carica il file dalla tua macchina usando curl.**
-
-1. **Configura un token su Render:**
-   - Environment → Aggiungi `UPLOAD_TOKEN` (es: `my-secret-123`)
-
-2. **Carica il file dalla tua macchina:**
-   ```bash
-   curl -X POST https://your-render-url.onrender.com/admin/upload-cookies \
-        -H "Authorization: Bearer my-secret-123" \
-        -F "file=@backend/cookies.txt"
-   ```
-
-3. **Fatto!** Il file verrà salvato automaticamente.
-
-Vedi `RENDER_COOKIES_SETUP.md` per istruzioni dettagliate e metodi alternativi.
-
-##### Metodo 3: Upload via Render Shell (Alternativa)
-
-Se preferisci usare la Shell web di Render:
-1. Dashboard → Il tuo servizio → **Shell**
-2. `mkdir -p /app/backend && cd /app/backend`
-3. `nano cookies.txt` (incolla il contenuto)
-4. Riavvia il servizio
-
-Il file cookies.txt verrà trovato automaticamente all'avvio del server!
+**Nota**: Il file deve essere in formato Netscape (prima riga: `# HTTP Cookie File` o `# Netscape HTTP Cookie File`).
 
 ### Step 7: Deploy
 

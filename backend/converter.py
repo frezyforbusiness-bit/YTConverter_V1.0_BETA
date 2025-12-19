@@ -7,7 +7,6 @@ import re
 import librosa
 import numpy as np
 import uuid
-import base64
 
 
 class YouTubeAudioConverter:
@@ -23,173 +22,28 @@ class YouTubeAudioConverter:
         self.temp_dir = temp_dir or tempfile.gettempdir()
         self.ensure_temp_dir()
         
-        # Path del file cookies - controlla in ordine di priorità:
-        # 1. Variabile d'ambiente COOKIES_FILE (custom path)
-        # 2. Render Secret Files (copiati in directory scrivibile)
-        # 3. Path di default (backend/cookies.txt)
+        # Path del file cookies (se presente)
+        # Può essere configurato via variabile d'ambiente COOKIES_FILE
         cookies_file_env = os.environ.get('COOKIES_FILE')
         if cookies_file_env:
             self.cookies_path = cookies_file_env
         else:
-            # Path di default (relativo alla directory backend) - scrivibile
+            # Path di default (relativo alla directory backend)
             backend_dir = os.path.dirname(os.path.abspath(__file__))
             self.cookies_path = os.path.join(backend_dir, 'cookies.txt')
         
-        # Crea il file cookies da variabile d'ambiente se presente (per Render/produzione)
-        self._create_cookies_from_env()
-        
-        # Copia Render Secret Files in directory scrivibile (se presente)
-        # I Secret Files sono read-only, quindi devono essere copiati
-        self._copy_render_secret_file()
-        
-        # Prova a estrarre cookies dal browser se il file non esiste (solo in locale)
-        if not os.path.exists(self.cookies_path):
-            self._extract_cookies_from_browser()
-        
-        # Verifica se il file cookies esiste e informa
+        # Verifica se il file cookies esiste
         if os.path.exists(self.cookies_path):
             file_size = os.path.getsize(self.cookies_path)
             print(f"✓ Cookies file found: {self.cookies_path} ({file_size} bytes)")
         else:
             print(f"⚠ Cookies file not found at: {self.cookies_path}")
             print(f"   YouTube downloads may fail with bot detection errors.")
-            print(f"   Tip: Use --cookies-from-browser to extract cookies from your browser")
+            print(f"   Tip: Use yt-dlp --cookies-from-browser chrome --cookies cookies.txt to extract cookies")
     
     def ensure_temp_dir(self):
         """Assicura che la directory temporanea esista"""
         os.makedirs(self.temp_dir, exist_ok=True)
-    
-    def _create_cookies_from_env(self):
-        """
-        Crea il file cookies.txt da variabile d'ambiente COOKIES_BASE64 se presente.
-        Utile per deployment su Render/Railway dove non si può committare il file.
-        
-        NOTA: Se COOKIES_BASE64 è troppo lungo (causa "argument list too long" su Render),
-        carica invece il file cookies.txt direttamente via SSH dopo il deploy.
-        """
-        cookies_base64 = os.environ.get('COOKIES_BASE64')
-        if cookies_base64:
-            # Limite di sicurezza: se troppo lungo, potrebbe causare problemi
-            # Render ha un limite di ~128KB per le env vars, ma il processo di build
-            # può avere limiti più stringenti
-            if len(cookies_base64) > 100000:  # ~100KB
-                print(f"⚠ Warning: COOKIES_BASE64 is very long ({len(cookies_base64)} chars)")
-                print(f"   This may cause 'argument list too long' errors on Render.")
-                print(f"   Consider uploading cookies.txt directly via SSH instead.")
-                print(f"   See documentation for alternative methods.")
-                # Non proviamo nemmeno a creare il file se è troppo lungo
-                return
-            
-            try:
-                # Decodifica il contenuto base64
-                cookies_content = base64.b64decode(cookies_base64).decode('utf-8')
-                # Crea il file cookies.txt
-                with open(self.cookies_path, 'w', encoding='utf-8') as f:
-                    f.write(cookies_content)
-                print(f"✓ Cookies file created from COOKIES_BASE64 environment variable")
-            except Exception as e:
-                print(f"⚠ Warning: Failed to create cookies file from COOKIES_BASE64: {e}")
-                # Non blocca l'avvio se fallisce
-    
-    def _copy_render_secret_file(self):
-        """
-        Copia il file cookies.txt da Render Secret Files in una directory scrivibile.
-        I Secret Files sono read-only (/etc/secrets/), quindi devono essere copiati
-        per essere usati da yt-dlp.
-        
-        Render Secret Files sono accessibili da:
-        - /etc/secrets/cookies.txt (path standard)
-        - /app/cookies.txt (root dell'app)
-        - cookies.txt (root relativa)
-        """
-        # Render Secret Files sono accessibili da /etc/secrets/ o dalla root dell'app
-        secret_paths = [
-            '/etc/secrets/cookies.txt',  # Path standard Render
-            '/app/cookies.txt',  # Root dell'app (Render Docker)
-            'cookies.txt'  # Root relativa
-        ]
-        
-        for secret_path in secret_paths:
-            if os.path.exists(secret_path):
-                try:
-                    # Leggi il contenuto dal Secret File (read-only)
-                    with open(secret_path, 'r', encoding='utf-8') as f:
-                        cookies_content = f.read()
-                    
-                    # Scrivi in una directory scrivibile (backend/cookies.txt)
-                    with open(self.cookies_path, 'w', encoding='utf-8') as f:
-                        f.write(cookies_content)
-                    
-                    print(f"✓ Copied Render Secret File from {secret_path} to {self.cookies_path}")
-                    return
-                except Exception as e:
-                    print(f"⚠ Warning: Failed to copy Render Secret File from {secret_path}: {e}")
-                    # Prova il prossimo path
-                    continue
-    
-    def _extract_cookies_from_browser(self):
-        """
-        Estrae i cookies dal browser usando yt-dlp --cookies-from-browser.
-        Supporta Chrome, Firefox, Edge, Safari, Opera.
-        Funziona solo in ambiente locale (non su Render/produzione).
-        """
-        # Solo in locale, non su produzione
-        if os.environ.get('RENDER') or os.environ.get('RAILWAY_ENVIRONMENT') or os.path.exists('/etc/secrets'):
-            return  # Skip su produzione
-        
-        # Lista di browser da provare in ordine
-        browsers = ['chrome', 'firefox', 'edge', 'safari', 'opera', 'brave']
-        
-        # Su Linux, prova anche Chrome Flatpak
-        if os.name != 'nt':  # Non Windows
-            browsers.insert(1, 'chrome:~/.var/app/com.google.Chrome/')
-        
-        for browser in browsers:
-            try:
-                print(f"Trying to extract cookies from {browser}...")
-                
-                # Usa yt-dlp per estrarre cookies dal browser
-                cmd = [
-                    'yt-dlp',
-                    '--cookies-from-browser', browser,
-                    '--cookies', self.cookies_path,
-                    '--no-download',  # Non scaricare nulla, solo estrarre cookies
-                    'https://www.youtube.com'  # URL dummy per far partire l'estrazione
-                ]
-                
-                result = subprocess.run(
-                    cmd,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    timeout=10,
-                    text=True
-                )
-                
-                # Se il file è stato creato e ha contenuto valido
-                if os.path.exists(self.cookies_path) and os.path.getsize(self.cookies_path) > 100:
-                    # Verifica che sia nel formato corretto (deve iniziare con # HTTP Cookie File o # Netscape HTTP Cookie File)
-                    with open(self.cookies_path, 'r', encoding='utf-8') as f:
-                        first_line = f.readline().strip()
-                        if first_line.startswith('# HTTP Cookie File') or first_line.startswith('# Netscape HTTP Cookie File'):
-                            print(f"✓ Successfully extracted cookies from {browser}")
-                            return
-                        else:
-                            # File non valido, rimuovilo
-                            os.remove(self.cookies_path)
-                            print(f"⚠ Invalid cookies format from {browser}, trying next browser...")
-                            continue
-                
-            except subprocess.TimeoutExpired:
-                print(f"⚠ Timeout extracting cookies from {browser}, trying next browser...")
-                continue
-            except FileNotFoundError:
-                # Browser non trovato, prova il prossimo
-                continue
-            except Exception as e:
-                print(f"⚠ Error extracting cookies from {browser}: {e}")
-                continue
-        
-        print("⚠ Could not extract cookies from any browser")
     
     def check_ffmpeg(self):
         """Verifica che ffmpeg sia installato e disponibile"""
@@ -285,25 +139,33 @@ class YouTubeAudioConverter:
                     }
                 }
                 
-                # Aggiungi cookies solo se il client li supporta
-                # ios e android non supportano cookies
+                # Aggiungi cookies usando i metodi ufficiali di yt-dlp (solo per client che supportano cookies)
+                # Stesso processo unificato sia in locale che in produzione:
+                # 1. Prova --cookies-from-browser (yt-dlp gestisce automaticamente se non disponibile)
+                # 2. Usa anche --cookies file.txt se esiste (come fallback o in aggiunta)
                 if client in ['web', 'mweb']:
+                    # Lista browser da provare (stessa logica in locale e produzione)
+                    browsers_to_try = ['chrome', 'firefox', 'edge', 'safari', 'opera', 'brave']
+                    # Su Linux, aggiungi anche Chrome Flatpak
+                    if os.name != 'nt':
+                        browsers_to_try.insert(1, 'chrome:~/.var/app/com.google.Chrome/')
+                    
+                    # Prova sempre --cookies-from-browser (yt-dlp gestisce automaticamente se browser non disponibile)
+                    # yt-dlp Python API: cookiesfrombrowser è una tupla (browser,)
+                    ydl_opts['cookiesfrombrowser'] = (browsers_to_try[0],)
+                    print(f"✓ Using --cookies-from-browser {browsers_to_try[0]}")
+                    
+                    # Usa anche --cookies file.txt se esiste (come fallback o in aggiunta)
                     if os.path.exists(self.cookies_path):
                         ydl_opts['cookiefile'] = self.cookies_path
                         file_size = os.path.getsize(self.cookies_path)
-                        print(f"✓ Using cookies file: {self.cookies_path} ({file_size} bytes)")
-                        # Verifica formato cookies (deve iniziare con # HTTP Cookie File o # Netscape HTTP Cookie File)
-                        try:
-                            with open(self.cookies_path, 'r', encoding='utf-8') as f:
-                                first_line = f.readline().strip()
-                                if not (first_line.startswith('# HTTP Cookie File') or first_line.startswith('# Netscape HTTP Cookie File')):
-                                    print(f"⚠ Warning: Cookies file may not be in correct format (should start with '# HTTP Cookie File')")
-                        except Exception as e:
-                            print(f"⚠ Warning: Could not verify cookies file format: {e}")
+                        print(f"✓ Using --cookies {self.cookies_path} ({file_size} bytes)")
                     else:
-                        print(f"⚠ Cookies file not found at {self.cookies_path}, proceeding without cookies")
-                        print(f"   This may cause 'Sign in to confirm you're not a bot' errors")
+                        print(f"⚠ Cookies file not found at {self.cookies_path}")
+                        print(f"   Tip: Extract with: yt-dlp --cookies-from-browser chrome --cookies {self.cookies_path}")
+                
                 elif client in ['ios', 'android']:
+                    # ios e android non supportano cookies
                     print(f"⚠ Client {client} does not support cookies, proceeding without")
                     print(f"   This may cause 'Sign in to confirm you're not a bot' errors")
                 
