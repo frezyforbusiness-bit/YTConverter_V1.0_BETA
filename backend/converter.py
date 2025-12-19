@@ -42,6 +42,10 @@ class YouTubeAudioConverter:
         # I Secret Files sono read-only, quindi devono essere copiati
         self._copy_render_secret_file()
         
+        # Prova a estrarre cookies dal browser se il file non esiste (solo in locale)
+        if not os.path.exists(self.cookies_path):
+            self._extract_cookies_from_browser()
+        
         # Verifica se il file cookies esiste e informa
         if os.path.exists(self.cookies_path):
             file_size = os.path.getsize(self.cookies_path)
@@ -49,6 +53,7 @@ class YouTubeAudioConverter:
         else:
             print(f"⚠ Cookies file not found at: {self.cookies_path}")
             print(f"   YouTube downloads may fail with bot detection errors.")
+            print(f"   Tip: Use --cookies-from-browser to extract cookies from your browser")
     
     def ensure_temp_dir(self):
         """Assicura che la directory temporanea esista"""
@@ -121,6 +126,70 @@ class YouTubeAudioConverter:
                     print(f"⚠ Warning: Failed to copy Render Secret File from {secret_path}: {e}")
                     # Prova il prossimo path
                     continue
+    
+    def _extract_cookies_from_browser(self):
+        """
+        Estrae i cookies dal browser usando yt-dlp --cookies-from-browser.
+        Supporta Chrome, Firefox, Edge, Safari, Opera.
+        Funziona solo in ambiente locale (non su Render/produzione).
+        """
+        # Solo in locale, non su produzione
+        if os.environ.get('RENDER') or os.environ.get('RAILWAY_ENVIRONMENT') or os.path.exists('/etc/secrets'):
+            return  # Skip su produzione
+        
+        # Lista di browser da provare in ordine
+        browsers = ['chrome', 'firefox', 'edge', 'safari', 'opera', 'brave']
+        
+        # Su Linux, prova anche Chrome Flatpak
+        if os.name != 'nt':  # Non Windows
+            browsers.insert(1, 'chrome:~/.var/app/com.google.Chrome/')
+        
+        for browser in browsers:
+            try:
+                print(f"Trying to extract cookies from {browser}...")
+                
+                # Usa yt-dlp per estrarre cookies dal browser
+                cmd = [
+                    'yt-dlp',
+                    '--cookies-from-browser', browser,
+                    '--cookies', self.cookies_path,
+                    '--no-download',  # Non scaricare nulla, solo estrarre cookies
+                    'https://www.youtube.com'  # URL dummy per far partire l'estrazione
+                ]
+                
+                result = subprocess.run(
+                    cmd,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    timeout=10,
+                    text=True
+                )
+                
+                # Se il file è stato creato e ha contenuto valido
+                if os.path.exists(self.cookies_path) and os.path.getsize(self.cookies_path) > 100:
+                    # Verifica che sia nel formato corretto (deve iniziare con # HTTP Cookie File o # Netscape HTTP Cookie File)
+                    with open(self.cookies_path, 'r', encoding='utf-8') as f:
+                        first_line = f.readline().strip()
+                        if first_line.startswith('# HTTP Cookie File') or first_line.startswith('# Netscape HTTP Cookie File'):
+                            print(f"✓ Successfully extracted cookies from {browser}")
+                            return
+                        else:
+                            # File non valido, rimuovilo
+                            os.remove(self.cookies_path)
+                            print(f"⚠ Invalid cookies format from {browser}, trying next browser...")
+                            continue
+                
+            except subprocess.TimeoutExpired:
+                print(f"⚠ Timeout extracting cookies from {browser}, trying next browser...")
+                continue
+            except FileNotFoundError:
+                # Browser non trovato, prova il prossimo
+                continue
+            except Exception as e:
+                print(f"⚠ Error extracting cookies from {browser}: {e}")
+                continue
+        
+        print("⚠ Could not extract cookies from any browser")
     
     def check_ffmpeg(self):
         """Verifica che ffmpeg sia installato e disponibile"""

@@ -7,6 +7,7 @@ import traceback
 import threading
 import uuid
 import time
+import subprocess
 
 app = Flask(__name__)
 # Configure CORS to allow requests from any origin (for production)
@@ -228,6 +229,92 @@ def download_file(task_id):
 def health():
     """Endpoint per verificare lo stato del server"""
     return jsonify({"status": "ok"})
+
+
+@app.route('/admin/extract-cookies', methods=['POST'])
+def extract_cookies():
+    """
+    Endpoint per estrarre cookies dal browser usando yt-dlp.
+    Protetto da token semplice (variabile d'ambiente UPLOAD_TOKEN).
+    
+    Uso:
+    curl -X POST https://your-render-url.onrender.com/admin/extract-cookies \
+         -H "Authorization: Bearer YOUR_TOKEN" \
+         -H "Content-Type: application/json" \
+         -d '{"browser": "chrome"}'
+    
+    Browser supportati: chrome, firefox, edge, safari, opera, brave
+    """
+    # Verifica token di autorizzazione
+    upload_token = os.environ.get('UPLOAD_TOKEN')
+    if not upload_token:
+        return jsonify({"error": "Upload token not configured"}), 503
+    
+    auth_header = request.headers.get('Authorization', '')
+    if not auth_header.startswith('Bearer '):
+        return jsonify({"error": "Missing or invalid Authorization header"}), 401
+    
+    provided_token = auth_header.replace('Bearer ', '').strip()
+    if provided_token != upload_token:
+        return jsonify({"error": "Invalid token"}), 401
+    
+    try:
+        data = request.get_json() or {}
+        browser = data.get('browser', 'chrome')
+        
+        # Lista browser supportati
+        supported_browsers = ['chrome', 'firefox', 'edge', 'safari', 'opera', 'brave']
+        if browser not in supported_browsers and not browser.startswith('chrome:'):
+            return jsonify({"error": f"Unsupported browser. Supported: {', '.join(supported_browsers)}"}), 400
+        
+        backend_dir = os.path.dirname(os.path.abspath(__file__))
+        cookies_path = os.path.join(backend_dir, 'cookies.txt')
+        
+        # Usa yt-dlp per estrarre cookies
+        cmd = [
+            'yt-dlp',
+            '--cookies-from-browser', browser,
+            '--cookies', cookies_path,
+            '--no-download',
+            'https://www.youtube.com'
+        ]
+        
+        result = subprocess.run(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=30,
+            text=True
+        )
+        
+        if os.path.exists(cookies_path) and os.path.getsize(cookies_path) > 100:
+            # Verifica formato
+            with open(cookies_path, 'r', encoding='utf-8') as f:
+                first_line = f.readline().strip()
+                if first_line.startswith('# HTTP Cookie File') or first_line.startswith('# Netscape HTTP Cookie File'):
+                    file_size = os.path.getsize(cookies_path)
+                    # Aggiorna il path nel converter
+                    converter.cookies_path = cookies_path
+                    return jsonify({
+                        "success": True,
+                        "message": f"Cookies extracted successfully from {browser}",
+                        "path": cookies_path,
+                        "size": file_size
+                    })
+        
+        error_output = result.stderr if result.stderr else result.stdout
+        return jsonify({
+            "error": f"Failed to extract cookies from {browser}",
+            "details": error_output[:500] if error_output else "Unknown error"
+        }), 500
+    
+    except subprocess.TimeoutExpired:
+        return jsonify({"error": "Timeout extracting cookies. Browser may be locked or not accessible."}), 500
+    except Exception as e:
+        error_msg = str(e)
+        print(f"Error extracting cookies: {error_msg}")
+        print(traceback.format_exc())
+        return jsonify({"error": f"Extraction failed: {error_msg}"}), 500
 
 
 @app.route('/admin/upload-cookies', methods=['POST'])
