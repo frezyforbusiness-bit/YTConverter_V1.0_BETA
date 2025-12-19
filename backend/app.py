@@ -23,7 +23,9 @@ TEMP_DIR = tempfile.gettempdir()
 converter = YouTubeAudioConverter(TEMP_DIR)
 
 # Dizionario per tracciare lo stato delle conversioni
+# Usa un lock per thread-safety
 conversion_status = {}
+conversion_status_lock = threading.Lock()
 
 
 @app.route('/')
@@ -44,61 +46,70 @@ def index():
 def convert_task(task_id, youtube_url, audio_format):
     """Esegue la conversione in un thread separato"""
     try:
-        # Ensure task exists (should already exist from /convert endpoint, but be safe)
-        if task_id not in conversion_status:
-            print(f"⚠ Warning: Task {task_id} not found, creating it now")
-            conversion_status[task_id] = {
-                'status': 'downloading',
-                'progress': 10,
-                'message': 'Starting download...',
-                'file': None,
-                'error': None
-            }
-        else:
-            # Update status (task already exists from /convert endpoint)
-            conversion_status[task_id].update({
-                'status': 'downloading',
-                'progress': 10,
-                'message': 'Starting download...'
-            })
+        print(f"[convert_task] Starting conversion for task_id: {task_id}")
+        with conversion_status_lock:
+            # Ensure task exists (should already exist from /convert endpoint, but be safe)
+            if task_id not in conversion_status:
+                print(f"⚠ Warning: Task {task_id} not found, creating it now")
+                conversion_status[task_id] = {
+                    'status': 'downloading',
+                    'progress': 10,
+                    'message': 'Starting download...',
+                    'file': None,
+                    'error': None
+                }
+            else:
+                # Update status (task already exists from /convert endpoint)
+                conversion_status[task_id].update({
+                    'status': 'downloading',
+                    'progress': 10,
+                    'message': 'Starting download...'
+                })
+            print(f"[convert_task] Task {task_id} status updated, total tasks: {len(conversion_status)}")
         
         # Download video
-        conversion_status[task_id].update({
-            'progress': 20,
-            'message': 'Downloading video...'
-        })
+        with conversion_status_lock:
+            conversion_status[task_id].update({
+                'progress': 20,
+                'message': 'Downloading video...'
+            })
         video_path, video_info = converter.download_video(youtube_url)
         
-        conversion_status[task_id].update({
-            'progress': 40,
-            'message': 'Download completed'
-        })
+        with conversion_status_lock:
+            conversion_status[task_id].update({
+                'progress': 40,
+                'message': 'Download completed'
+            })
         time.sleep(0.5)  # Small pause to show message
         
         # Convert to audio
-        conversion_status[task_id].update({
-            'progress': 50,
-            'message': 'Converting to ' + audio_format.upper() + '...'
-        })
+        with conversion_status_lock:
+            conversion_status[task_id].update({
+                'progress': 50,
+                'message': 'Converting to ' + audio_format.upper() + '...'
+            })
         temp_audio_path = converter.convert_to_audio(video_path, audio_format)
         
-        conversion_status[task_id].update({
-            'progress': 60,
-            'message': 'Conversion completed'
-        })
+        with conversion_status_lock:
+            conversion_status[task_id].update({
+                'progress': 60,
+                'message': 'Conversion completed'
+            })
         time.sleep(0.5)
         
         # Audio analysis
-        conversion_status[task_id].update({
-            'progress': 70,
-            'message': 'Analyzing track: BPM & key detection...'
-        })
+        with conversion_status_lock:
+            conversion_status[task_id].update({
+                'progress': 70,
+                'message': 'Analyzing track: BPM & key detection...'
+            })
         bpm, scale = converter.analyze_audio(temp_audio_path)
         
-        conversion_status[task_id].update({
-            'progress': 85,
-            'message': 'Analysis completed'
-        })
+        with conversion_status_lock:
+            conversion_status[task_id].update({
+                'progress': 85,
+                'message': 'Analysis completed'
+            })
         time.sleep(0.5)
         
         # Genera nome file e rinomina
@@ -118,34 +129,38 @@ def convert_task(task_id, youtube_url, audio_format):
             except:
                 pass
         
-        conversion_status[task_id].update({
-            'status': 'completed',
-            'progress': 100,
-            'message': 'Ready for download',
-            'file': final_output_path
-        })
+        with conversion_status_lock:
+            conversion_status[task_id].update({
+                'status': 'completed',
+                'progress': 100,
+                'message': 'Ready for download',
+                'file': final_output_path
+            })
     
     except Exception as e:
         error_msg = str(e)
         print(f"Error during conversion: {error_msg}")
         print(traceback.format_exc())
-        conversion_status[task_id] = {
-            'status': 'error',
-            'progress': 0,
-            'message': 'Error during conversion',
-            'error': error_msg,
-            'file': None
-        }
+        with conversion_status_lock:
+            conversion_status[task_id] = {
+                'status': 'error',
+                'progress': 0,
+                'message': 'Error during conversion',
+                'error': error_msg,
+                'file': None
+            }
 
 
 @app.route('/convert', methods=['POST'])
 def convert():
     """Endpoint to start conversion (returns task_id)"""
     try:
+        print("=" * 60)
         print("=== /convert endpoint called ===")
         print(f"Request method: {request.method}")
         print(f"Content-Type: {request.content_type}")
         print(f"Headers: {dict(request.headers)}")
+        print(f"Current conversion_status size: {len(conversion_status)}")
         
         data = request.get_json()
         print(f"Received data: {data}")
@@ -176,20 +191,22 @@ def convert():
         
         # Initialize task status BEFORE starting thread
         # This ensures the task is always available for status checks
-        conversion_status[task_id] = {
-            'status': 'pending',
-            'progress': 0,
-            'message': 'Initializing conversion...',
-            'file': None,
-            'error': None
-        }
-        
-        # Verify task was added (safety check)
-        if task_id not in conversion_status:
-            print(f"ERROR: Task {task_id} was not added to conversion_status!")
-            return jsonify({"error": "Failed to initialize task"}), 500
-        
-        print(f"✓ Task {task_id} initialized in conversion_status (total tasks: {len(conversion_status)})")
+        with conversion_status_lock:
+            conversion_status[task_id] = {
+                'status': 'pending',
+                'progress': 0,
+                'message': 'Initializing conversion...',
+                'file': None,
+                'error': None
+            }
+            
+            # Verify task was added (safety check)
+            if task_id not in conversion_status:
+                print(f"ERROR: Task {task_id} was not added to conversion_status!")
+                return jsonify({"error": "Failed to initialize task"}), 500
+            
+            print(f"✓ Task {task_id} initialized in conversion_status (total tasks: {len(conversion_status)})")
+            print(f"   Task details: {conversion_status[task_id]}")
         
         # Start conversion in separate thread
         thread = threading.Thread(target=convert_task, args=(task_id, youtube_url, audio_format))
@@ -198,12 +215,27 @@ def convert():
         
         print(f"Thread started for task_id: {task_id}")
         
+        # Verify task still exists after thread start
+        with conversion_status_lock:
+            if task_id not in conversion_status:
+                print(f"ERROR: Task {task_id} disappeared after thread start!")
+                return jsonify({"error": "Task lost after thread creation"}), 500
+            print(f"✓ Task {task_id} verified after thread start (total: {len(conversion_status)})")
+        
         # Small delay to ensure task is fully registered before returning response
         time.sleep(0.1)
+        
+        # Final verification before returning
+        with conversion_status_lock:
+            if task_id not in conversion_status:
+                print(f"ERROR: Task {task_id} disappeared before returning response!")
+                return jsonify({"error": "Task lost before response"}), 500
+            print(f"✓ Final check: Task {task_id} exists (total: {len(conversion_status)})")
         
         response_data = {"task_id": task_id}
         response = jsonify(response_data)
         print(f"Returning response: {response_data}")
+        print("=" * 60)
         return response
     
     except Exception as e:
@@ -216,33 +248,38 @@ def convert():
 @app.route('/status/<task_id>', methods=['GET'])
 def get_status(task_id):
     """Endpoint to get conversion status"""
-    print(f"Status check for task_id: {task_id}")
-    print(f"Total tasks in memory: {len(conversion_status)}")
-    if len(conversion_status) > 0:
-        print(f"Available task IDs (first 5): {list(conversion_status.keys())[:5]}")
-    
-    if task_id not in conversion_status:
-        print(f"⚠ Task {task_id} not found in conversion_status")
-        print(f"   This could be a race condition or the task was never created")
-        print(f"   Request timestamp: {time.time()}")
-        return jsonify({
-            "error": "Task not found", 
-            "task_id": task_id,
-            "available_tasks": len(conversion_status)
-        }), 404
-    
-    status = conversion_status[task_id].copy()
-    print(f"✓ Task {task_id} found, status: {status.get('status')}, progress: {status.get('progress')}%")
-    return jsonify(status)
+    with conversion_status_lock:
+        print(f"Status check for task_id: {task_id}")
+        print(f"Total tasks in memory: {len(conversion_status)}")
+        if len(conversion_status) > 0:
+            print(f"Available task IDs (first 5): {list(conversion_status.keys())[:5]}")
+        
+        if task_id not in conversion_status:
+            print(f"⚠ Task {task_id} not found in conversion_status")
+            print(f"   This could be a race condition or the task was never created")
+            print(f"   Request timestamp: {time.time()}")
+            print(f"   Checking if /convert was called for this task...")
+            # Verifica se il task esisteva prima
+            return jsonify({
+                "error": "Task not found", 
+                "task_id": task_id,
+                "available_tasks": len(conversion_status),
+                "suggestion": "The task may not have been created. Check /convert endpoint logs."
+            }), 404
+        
+        status = conversion_status[task_id].copy()
+        print(f"✓ Task {task_id} found, status: {status.get('status')}, progress: {status.get('progress')}%")
+        return jsonify(status)
 
 
 @app.route('/download/<task_id>', methods=['GET'])
 def download_file(task_id):
     """Endpoint to download converted file"""
-    if task_id not in conversion_status:
-        return jsonify({"error": "Task not found"}), 404
-    
-    status = conversion_status[task_id]
+    with conversion_status_lock:
+        if task_id not in conversion_status:
+            return jsonify({"error": "Task not found"}), 404
+        
+        status = conversion_status[task_id]
     
     if status['status'] != 'completed' or not status.get('file'):
         return jsonify({"error": "File not ready yet"}), 400
@@ -281,6 +318,7 @@ if __name__ == '__main__':
     
     print(f"Server starting on http://0.0.0.0:{port}")
     print(f"Debug mode: {debug}")
+    print(f"Initial conversion_status size: {len(conversion_status)}")
     print("Ready to accept requests...")
     app.run(debug=debug, host='0.0.0.0', port=port)
 
