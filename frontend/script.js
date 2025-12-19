@@ -211,7 +211,19 @@ form.addEventListener('submit', async (e) => {
                 
                 if (!statusResponse.ok) {
                     clearInterval(pollInterval);
-                    showError('Oops, server communication issue 😬');
+                    let errorMsg = 'Server communication issue';
+                    try {
+                        const errorText = await statusResponse.text();
+                        if (errorText) {
+                            const errorData = JSON.parse(errorText);
+                            errorMsg = errorData.error || errorMsg;
+                        } else {
+                            errorMsg = `Error ${statusResponse.status}: ${statusResponse.statusText}`;
+                        }
+                    } catch (e) {
+                        errorMsg = `Error ${statusResponse.status}: ${statusResponse.statusText}`;
+                    }
+                    showError(errorMsg);
                     setLoading(false);
                     hideProgress();
                     return;
