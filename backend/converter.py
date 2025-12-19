@@ -287,13 +287,25 @@ class YouTubeAudioConverter:
                 
                 # Aggiungi cookies solo se il client li supporta
                 # ios e android non supportano cookies
-                if client in ['web', 'mweb'] and os.path.exists(self.cookies_path):
-                    ydl_opts['cookiefile'] = self.cookies_path
-                    print(f"Using cookies file: {self.cookies_path}")
+                if client in ['web', 'mweb']:
+                    if os.path.exists(self.cookies_path):
+                        ydl_opts['cookiefile'] = self.cookies_path
+                        file_size = os.path.getsize(self.cookies_path)
+                        print(f"✓ Using cookies file: {self.cookies_path} ({file_size} bytes)")
+                        # Verifica formato cookies (deve iniziare con # HTTP Cookie File o # Netscape HTTP Cookie File)
+                        try:
+                            with open(self.cookies_path, 'r', encoding='utf-8') as f:
+                                first_line = f.readline().strip()
+                                if not (first_line.startswith('# HTTP Cookie File') or first_line.startswith('# Netscape HTTP Cookie File')):
+                                    print(f"⚠ Warning: Cookies file may not be in correct format (should start with '# HTTP Cookie File')")
+                        except Exception as e:
+                            print(f"⚠ Warning: Could not verify cookies file format: {e}")
+                    else:
+                        print(f"⚠ Cookies file not found at {self.cookies_path}, proceeding without cookies")
+                        print(f"   This may cause 'Sign in to confirm you're not a bot' errors")
                 elif client in ['ios', 'android']:
-                    print(f"Client {client} does not support cookies, proceeding without")
-                else:
-                    print(f"Cookies file not found at {self.cookies_path}, proceeding without cookies")
+                    print(f"⚠ Client {client} does not support cookies, proceeding without")
+                    print(f"   This may cause 'Sign in to confirm you're not a bot' errors")
                 
                 # Extract info first (validates URL and checks for playlists)
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
