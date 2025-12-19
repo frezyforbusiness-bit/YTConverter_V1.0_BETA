@@ -45,12 +45,23 @@ def index():
 def convert_task(task_id, youtube_url, audio_format):
     """Esegue la conversione in un thread separato"""
     try:
-        # Update status (task already exists from /convert endpoint)
-        conversion_status[task_id].update({
-            'status': 'downloading',
-            'progress': 10,
-            'message': 'Starting download...'
-        })
+        # Ensure task exists (should already exist from /convert endpoint, but be safe)
+        if task_id not in conversion_status:
+            print(f"⚠ Warning: Task {task_id} not found, creating it now")
+            conversion_status[task_id] = {
+                'status': 'downloading',
+                'progress': 10,
+                'message': 'Starting download...',
+                'file': None,
+                'error': None
+            }
+        else:
+            # Update status (task already exists from /convert endpoint)
+            conversion_status[task_id].update({
+                'status': 'downloading',
+                'progress': 10,
+                'message': 'Starting download...'
+            })
         
         # Download video
         conversion_status[task_id].update({
@@ -195,10 +206,15 @@ def convert():
 @app.route('/status/<task_id>', methods=['GET'])
 def get_status(task_id):
     """Endpoint to get conversion status"""
+    print(f"Status check for task_id: {task_id}")
+    print(f"Available tasks: {list(conversion_status.keys())[:5]}...")  # Log first 5 task IDs for debugging
+    
     if task_id not in conversion_status:
-        return jsonify({"error": "Task not found"}), 404
+        print(f"⚠ Task {task_id} not found in conversion_status")
+        return jsonify({"error": "Task not found", "task_id": task_id}), 404
     
     status = conversion_status[task_id].copy()
+    print(f"✓ Task {task_id} found, status: {status.get('status')}")
     return jsonify(status)
 
 
