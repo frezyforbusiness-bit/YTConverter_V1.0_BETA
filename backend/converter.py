@@ -178,19 +178,26 @@ class YouTubeAudioConverter:
             raise ValueError("Invalid YouTube URL")
         
         # Lista di client da provare in ordine (fallback se uno fallisce)
-        # Ogni client ha caratteristiche diverse e alcuni funzionano meglio con cookies
-        player_clients = ['ios', 'android', 'web', 'mweb']
+        # web e mweb supportano cookies, ios e android no
+        # Proviamo prima con cookies, poi senza se necessario
+        player_clients_with_cookies = ['web', 'mweb']  # Supportano cookies
+        player_clients_without_cookies = ['ios', 'android']  # Non supportano cookies
+        
+        # Prova prima con cookies (se disponibili), poi senza
+        has_cookies = os.path.exists(self.cookies_path)
+        all_clients = player_clients_with_cookies + player_clients_without_cookies if has_cookies else player_clients_without_cookies
         
         # Prova ogni client finché uno non funziona
         last_error = None
-        for client in player_clients:
+        for client in all_clients:
             try:
                 print(f"Trying YouTube client: {client}...")
                 
                 # Optimized yt-dlp configuration for cloud environments (Render, Docker, VPS)
                 # Force IPv4 - important for Render (often prefers IPv6 which breaks YouTube)
+                # Usa 'best' invece di 'bestaudio/best' per includere anche video+audio se necessario
                 ydl_opts = {
-                    'format': 'bestaudio/best',
+                    'format': 'best[ext=webm]/best[ext=mp4]/best',  # Prova formati comuni, poi il migliore disponibile
                     'outtmpl': os.path.join(self.temp_dir, '%(title)s.%(ext)s'),
                     'noplaylist': True,
                     'quiet': False,  # Mostra warnings per debug
@@ -206,10 +213,13 @@ class YouTubeAudioConverter:
                     }
                 }
                 
-                # Aggiungi cookies se il file esiste
-                if os.path.exists(self.cookies_path):
+                # Aggiungi cookies solo se il client li supporta
+                # ios e android non supportano cookies
+                if client in ['web', 'mweb'] and os.path.exists(self.cookies_path):
                     ydl_opts['cookiefile'] = self.cookies_path
                     print(f"Using cookies file: {self.cookies_path}")
+                elif client in ['ios', 'android']:
+                    print(f"Client {client} does not support cookies, proceeding without")
                 else:
                     print(f"Cookies file not found at {self.cookies_path}, proceeding without cookies")
                 
@@ -233,13 +243,18 @@ class YouTubeAudioConverter:
                 if not info.get('id'):
                     raise ValueError("Unable to extract video information. Check that the URL is correct.")
                 
-                # Check if audio formats are available
+                # Check if audio or video formats are available
                 formats = info.get('formats', [])
                 audio_formats = [f for f in formats if f.get('acodec') != 'none' and f.get('vcodec') == 'none']
+                video_formats = [f for f in formats if f.get('vcodec') != 'none']
                 
                 if not audio_formats and not get_info_only:
-                    # Se non ci sono formati audio puri, continua comunque (bestaudio/best prenderà il migliore)
-                    print(f"⚠ Warning: No pure audio formats found, will use best available format")
+                    if video_formats:
+                        # Se ci sono formati video, useremo quello e estraiamo l'audio dopo
+                        print(f"⚠ Warning: No pure audio formats found, will download video and extract audio")
+                    else:
+                        # Se non ci sono formati disponibili, questo client non funziona
+                        raise Exception("No downloadable formats available for this client")
                 
                 # If only info is needed, return now
                 if get_info_only:
