@@ -264,10 +264,11 @@ class YouTubeAudioConverter:
                 
                 # Optimized yt-dlp configuration for cloud environments (Render, Docker, VPS)
                 # Force IPv4 - important for Render (often prefers IPv6 which breaks YouTube)
-                # Usa formato flessibile che prova diversi formati in ordine di preferenza
+                # Usa formato molto flessibile: preferisce audio, ma accetta qualsiasi formato disponibile
                 ydl_opts = {
-                    # Prova prima formati audio puri, poi video+audio, poi qualsiasi formato disponibile
-                    'format': 'bestaudio[ext=m4a]/bestaudio[ext=webm]/bestaudio[ext=mp3]/bestaudio/best[ext=m4a]/best[ext=webm]/best[ext=mp4]/best',
+                    # Formato molto permissivo: preferisce audio, ma accetta qualsiasi cosa disponibile
+                    # bestaudio/best accetta qualsiasi formato che contenga audio
+                    'format': 'bestaudio/best',
                     'outtmpl': os.path.join(self.temp_dir, '%(title)s.%(ext)s'),
                     'noplaylist': True,
                     'quiet': False,  # Mostra warnings per debug
